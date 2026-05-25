@@ -10,6 +10,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  StickyNote,
   Unlock,
   Upload,
   X,
@@ -1351,7 +1352,9 @@ function TodoRow({
       <button onClick={() => onMove(-1)} disabled={catIdx === 0} aria-label="위로 이동" title="위로"><ArrowUp size={11} /></button>
       <button onClick={() => onMove(1)} disabled={catIdx === catLength - 1} aria-label="아래로 이동" title="아래로"><ArrowDown size={11} /></button>
     </div>}
-    <button className="icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8", fontSize: ".7rem", letterSpacing: "-.03em" }}>{todo.memo && !memoOpen ? "✎·" : " ✎"}</button>
+    <button className="icon-btn memo-icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8" }} aria-label="메모" title="메모">
+      <StickyNote size={13} strokeWidth={1.7} fill={todo.memo && !memoOpen ? `${color}18` : "none"} />
+    </button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { important: !todo.important }); void updateTodoPatch(scope, todo, { important: !todo.important }); }} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { hidden: !todo.hidden }); void updateTodoPatch(scope, todo, { hidden: !todo.hidden }); }}>{todo.hidden ? <Lock size={13} /> : <Unlock size={13} />}</button>
     {editMode && <>

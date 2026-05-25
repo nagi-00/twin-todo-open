@@ -637,6 +637,11 @@ select {
   justify-content: center;
 }
 
+.memo-icon-btn {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .tab-bar {
   display: flex;
   gap: 0.35rem;
