@@ -28,6 +28,24 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "SejongHakdang";
+  src: url("/fonts/sejonghakdang.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jeyeon";
+  src: url("/fonts/jeyeon.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Galmuri";
+  src: url("/fonts/galmuri.ttf") format("truetype");
+  font-display: swap;
+}
+
 *,
 *::before,
 *::after {

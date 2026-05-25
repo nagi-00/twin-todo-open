@@ -68,6 +68,9 @@ const FONT_OPTIONS = [
   { key: "concon", label: "콘콘", family: "Concon" },
   { key: "maruminya", label: "마루미냐", family: "Maruminya" },
   { key: "pretendard", label: "프리텐다드", family: "PretendardLocal" },
+  { key: "sejonghakdang", label: "세종학당", family: "SejongHakdang" },
+  { key: "jeyeon", label: "제연", family: "Jeyeon" },
+  { key: "galmuri", label: "갈무리", family: "Galmuri" },
 ] as const;
 type FontKey = typeof FONT_OPTIONS[number]["key"];
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
