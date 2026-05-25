@@ -514,11 +514,56 @@ select {
 .completed,
 .crossed {
   color: #aaa;
+}
+
+.completed {
   text-decoration: line-through;
 }
 
 .crossed {
-  text-decoration-style: wavy;
+  text-decoration: none;
+}
+
+.sort-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.sort-stack button {
+  display: flex;
+  padding: 1px 3px;
+  color: #999;
+}
+
+.sort-stack button:disabled {
+  color: #ddd;
+}
+
+.tri-up,
+.tri-down {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+}
+
+.tri-up {
+  border-bottom: 4.5px solid currentColor;
+}
+
+.tri-down {
+  border-top: 4.5px solid currentColor;
+}
+
+.todo-quick-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
 }
 
 .footer-actions {

@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -32,8 +33,15 @@ function todoDoc(scope: TodoScope, id: string) {
 export function subscribeTodos(scope: TodoScope, date: string, callback: (todos: TodoItem[]) => void) {
   const q = query(todosCollection(scope), where("date", "==", date), orderBy("createdAt", "asc"));
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as TodoItem));
+    callback(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as TodoItem).sort(sortTodos));
   });
+}
+
+function sortTodos(a: TodoItem, b: TodoItem) {
+  const aPos = typeof a.position === "number" ? a.position : Number.POSITIVE_INFINITY;
+  const bPos = typeof b.position === "number" ? b.position : Number.POSITIVE_INFINITY;
+  if (aPos !== bPos) return aPos - bPos;
+  return 0;
 }
 
 export async function addTodo(scope: TodoScope, date: string, categoryKey: CategoryKey, title: string) {
@@ -47,6 +55,7 @@ export async function addTodo(scope: TodoScope, date: string, categoryKey: Categ
     hidden: false,
     important: false,
     memo: "",
+    position: Date.now(),
     date,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -63,6 +72,7 @@ export async function updateTodoStatus(scope: TodoScope, todo: TodoItem, status:
     hidden: todo.hidden ?? false,
     important: todo.important ?? false,
     memo: todo.memo ?? "",
+    position: todo.position ?? Date.now(),
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -78,6 +88,7 @@ export async function updateTodoTitle(scope: TodoScope, todo: TodoItem, title: s
     hidden: todo.hidden ?? false,
     important: todo.important ?? false,
     memo: todo.memo ?? "",
+    position: todo.position ?? Date.now(),
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -97,6 +108,7 @@ export async function updateTodoPatch(scope: TodoScope, todo: TodoItem, patch: P
     hidden: patch.hidden ?? todo.hidden ?? false,
     important: patch.important ?? todo.important ?? false,
     memo: patch.memo ?? todo.memo ?? "",
+    position: patch.position ?? todo.position ?? Date.now(),
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -104,4 +116,14 @@ export async function updateTodoPatch(scope: TodoScope, todo: TodoItem, patch: P
 
 export async function deleteRoutineUnsafe(scope: TodoScope, id: string) {
   await deleteDoc(todoDoc(scope, id));
+}
+
+export async function reorderTodos(scope: TodoScope, todos: TodoItem[]) {
+  await Promise.all(todos.map((todo, index) => updateTodoPatch(scope, todo, { position: index + 1 })));
+}
+
+export async function getTodosForDate(scope: TodoScope, date: string) {
+  const q = query(todosCollection(scope), where("date", "==", date), orderBy("createdAt", "asc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as TodoItem).sort(sortTodos);
 }

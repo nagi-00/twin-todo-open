@@ -23,7 +23,7 @@ import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, re
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
 import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
 import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar } from "./services/profile";
-import { addTodo, archiveTodo, subscribeTodos, updateTodoPatch, updateTodoTitle } from "./services/todos";
+import { addTodo, archiveTodo, getTodosForDate, reorderTodos, subscribeTodos, updateTodoPatch, updateTodoTitle } from "./services/todos";
 import {
   addRoutine,
   DailyEntry,
@@ -706,9 +706,42 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
     await Promise.all(targets.map((r) => addTodo(scope, dateKey, r.categoryKey, r.text)));
   }
 
+  async function applyYesterdayX() {
+    const previousDate = addDays(selectedDate, -1);
+    const previousKey = toDateKey(previousDate);
+    const failed = (await getTodosForDate(scope, previousKey)).filter((todo) => (todo.state ?? 0) === 2 && todo.status !== "archived");
+    if (!failed.length) {
+      alert("전날 ☒ 항목이 없습니다.");
+      return;
+    }
+    await Promise.all(failed.map((todo) => addTodo(scope, dateKey, todo.categoryKey, todo.title)));
+  }
+
+  async function moveTodo(categoryKey: CategoryKey, todo: TodoItem, dir: -1 | 1) {
+    const categoryList = visible.filter((item) => item.categoryKey === categoryKey);
+    const from = categoryList.findIndex((item) => item.id === todo.id);
+    const to = from + dir;
+    if (from < 0 || to < 0 || to >= categoryList.length) return;
+    const reorderedCategory = [...categoryList];
+    [reorderedCategory[from], reorderedCategory[to]] = [reorderedCategory[to], reorderedCategory[from]];
+    const queues = new Map<CategoryKey, TodoItem[]>(CATEGORY_ORDER.map((key) => [key, key === categoryKey ? [...reorderedCategory] : visible.filter((item) => item.categoryKey === key)]));
+    const nextVisible = visible.map((item) => queues.get(item.categoryKey)?.shift() || item);
+    setTodos((prev) => {
+      const active = new Map(nextVisible.map((item, index) => [item.id, { ...item, position: index + 1 }]));
+      return prev.map((item) => active.get(item.id) || item);
+    });
+    await reorderTodos(scope, nextVisible);
+  }
+
+  async function archiveAll() {
+    if (!visible.length || !window.confirm("오늘 목록을 전부 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    setTodos((prev) => prev.map((todo) => todo.status === "archived" ? todo : { ...todo, status: "archived" }));
+    await Promise.all(visible.map((todo) => archiveTodo(scope, todo)));
+  }
+
   async function shareToday() {
     try {
-      const payload = { todos: visible, note, color, messages, updatedAt: null };
+      const payload = { todos: visible.filter((todo) => !todo.hidden), note, color, messages, updatedAt: null };
       await saveSharedDay(uid, dateKey, payload);
       if (scope.type === "pair") await savePairSharedDay(scope.pairId, uid, dateKey, payload);
       alert("오늘의 공유 카드가 업데이트되었습니다.");
@@ -776,12 +809,16 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
           return (
             <div key={key} style={{ marginBottom: ".7rem" }}>
               <span style={sectionLabel({ color: `${catColor}bb` })}>{labels[key]}</span>
-              {list.map((todo) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} onPatch={patchLocal} />)}
+              {list.map((todo, catIdx) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} catIdx={catIdx} catLength={list.length} onPatch={patchLocal} onMove={(dir) => moveTodo(key, todo, dir)} />)}
               {list.length === 0 && !editMode && <div style={{ fontSize: ".75rem", color: "#e8e8e8", padding: ".1rem 0" }}>—</div>}
               {idx < CATEGORY_ORDER.length - 1 && <div style={{ borderTop: `1px solid ${color}22`, margin: ".6rem 0" }} />}
             </div>
           );
         })}
+      </div>
+      <div className="todo-quick-actions">
+        <button onClick={applyYesterdayX} style={pill("#f0f0f0", "#888", true)}>☒ 적용</button>
+        {routines.length > 0 && <button style={pill(color, "#fff", true)} onClick={applyRoutines}>루틴 적용</button>}
       </div>
       <div className="timestamp-box">
         <span style={sectionLabel({ color })}>timestamp</span>
@@ -808,8 +845,8 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
         <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
         <button style={pill(color, "#fff")} onClick={shareToday}>Share</button>
         <button style={pill("#f5f5f5", "#aaa")} onClick={() => setRoutineOpen(true)}>루틴</button>
-        {routines.length > 0 && <button style={pill("#f0f0f0", "#888", true)} onClick={applyRoutines}>루틴 적용</button>}
         <div style={{ flex: 1 }} />
+        {editMode && visible.length > 0 && <button style={pill("#fee2e2", "#ef4444")} onClick={archiveAll}>전체 삭제</button>}
         {editMode && <button style={pill("#f5f5f5", "#aaa")} onClick={() => setCatOpen(true)}>카테고리</button>}
         <button onClick={() => setEditMode((value) => !value)} style={pill(editMode ? "#e8e8e8" : "#f5f5f5", editMode ? "#555" : "#bbb")}>
           {editMode ? "Done" : "Edit"}
@@ -817,12 +854,30 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
       </div>
       {routineOpen && <RoutineModal uid={uid} routines={routines} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
-      {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible} labels={labels} color={color} texture={texture} />}
+      {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible.filter((todo) => !todo.hidden)} labels={labels} color={color} texture={texture} />}
     </section>
   );
 }
 
-function TodoRow({ todo, scope, color, editMode, onPatch }: { todo: TodoItem; scope: Scope; color: string; editMode: boolean; onPatch: (todoId: string, patch: Partial<TodoItem>) => void }) {
+function TodoRow({
+  todo,
+  scope,
+  color,
+  editMode,
+  catIdx,
+  catLength,
+  onPatch,
+  onMove,
+}: {
+  todo: TodoItem;
+  scope: Scope;
+  color: string;
+  editMode: boolean;
+  catIdx: number;
+  catLength: number;
+  onPatch: (todoId: string, patch: Partial<TodoItem>) => void;
+  onMove: (dir: -1 | 1) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(todo.title);
   const [memoOpen, setMemoOpen] = useState(false);
@@ -845,9 +900,13 @@ function TodoRow({ todo, scope, color, editMode, onPatch }: { todo: TodoItem; sc
     await updateTodoPatch(scope, todo, { memo: nextMemo });
   }
   return <div style={{ marginBottom: todo.memo && !memoOpen ? ".35rem" : ".22rem" }}>
-    <div className="todo-item" style={{ opacity: todo.hidden ? 0.4 : 1, backgroundColor: todo.important ? `${color}33` : "transparent" }}>
+    <div className="todo-item" style={{ opacity: 1, backgroundColor: todo.important ? `${color}33` : "transparent" }}>
+    {editMode && <div className="sort-stack">
+      <button className="icon-btn" onClick={() => onMove(-1)} disabled={catIdx === 0}><span className="tri-up" /></button>
+      <button className="icon-btn" onClick={() => onMove(1)} disabled={catIdx === catLength - 1}><span className="tri-down" /></button>
+    </div>}
     <button className="bullet-btn" onClick={cycle} style={{ color }}>{BULLETS[state]}</button>
-    {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !isCoarsePointer()) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.hidden ? "숨긴 항목" : todo.title}</span>}
+    {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !isCoarsePointer()) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.title}</span>}
     <button className="icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8", fontSize: ".7rem", letterSpacing: "-.03em" }}>{todo.memo && !memoOpen ? "✎·" : " ✎"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { important: !todo.important }); void updateTodoPatch(scope, todo, { important: !todo.important }); }} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { hidden: !todo.hidden }); void updateTodoPatch(scope, todo, { hidden: !todo.hidden }); }}>{todo.hidden ? <Lock size={13} /> : <Unlock size={13} />}</button>
@@ -899,9 +958,9 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
             <PrintSectionHeader label={labels[key]} color={CATEGORY_ACCENT[key] || color} />
             {list.map((todo) => <div key={todo.id} className="print-row" style={{ color: (todo.state ?? 0) === 1 ? "#999" : "#1a1a1a", textDecoration: (todo.state ?? 0) === 1 ? "line-through" : "none", background: todo.important ? `${color}22` : "transparent" }}>
               <span>{(todo.state ?? 0) === 0 ? "·" : (todo.state ?? 0) === 1 ? "✓" : "✗"}</span>
-              <p>{todo.hidden ? "비공개 항목입니다." : todo.title}</p>
-              {todo.important && !todo.hidden && <b style={{ color }}>★</b>}
-              {todo.memo && !todo.hidden && <small>└ {todo.memo}</small>}
+              <p>{todo.title}</p>
+              {todo.important && <b style={{ color }}>★</b>}
+              {todo.memo && <small>└ {todo.memo}</small>}
             </div>)}
           </section>;
         })}

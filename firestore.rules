@@ -63,7 +63,8 @@ service cloud.firestore {
         && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
         && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool)
         && (!("important" in request.resource.data) || request.resource.data.important is bool)
-        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500));
+        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
+        && (!("position" in request.resource.data) || request.resource.data.position is number);
     }
 
     function validTodoUpdate() {
@@ -74,7 +75,8 @@ service cloud.firestore {
         && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
         && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool)
         && (!("important" in request.resource.data) || request.resource.data.important is bool)
-        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500));
+        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
+        && (!("position" in request.resource.data) || request.resource.data.position is number);
     }
 
     match /users/{uid} {
