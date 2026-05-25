@@ -303,7 +303,6 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [tab, setTab] = useState<TabKey>("todo");
   const [pair, setPair] = useState<Pair | null>(null);
   const [requests, setRequests] = useState<PairRequest[]>([]);
-  const [scopeMode, setScopeMode] = useState<"solo" | "pair">("solo");
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -315,9 +314,6 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   useEffect(() => subscribePairRequests(user.uid, setRequests), [user.uid]);
   useEffect(() => subscribeDateColors(user.uid, setDateColors), [user.uid]);
   useEffect(() => subscribeNotes(user.uid, setNotes), [user.uid]);
-  useEffect(() => {
-    if (pair) setScopeMode("pair");
-  }, [pair]);
   useEffect(() => {
     let cancelled = false;
     const partnerUid = pair?.members.find((member) => member !== user.uid);
@@ -341,7 +337,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
 
   const dateKey = toDateKey(selectedDate);
   const color = dateColors[dateKey] || "#2d2d2d";
-  const scope: Scope = useMemo(() => scopeMode === "pair" && pair ? { type: "pair", pairId: pair.id, uid: user.uid } : { type: "solo", uid: user.uid }, [scopeMode, pair, user.uid]);
+  const scope: Scope = useMemo(() => ({ type: "solo", uid: user.uid }), [user.uid]);
 
   return (
     <div className="app" style={{ display: "flex", minHeight: "100vh" }}>
@@ -357,8 +353,6 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             onFontChange={setFontKey}
             requests={requests}
             pair={pair}
-            scopeMode={scopeMode}
-            onScopeMode={setScopeMode}
           />
           <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />
         </div>
@@ -383,7 +377,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
           ))}
         </div>
 
-        {tab === "todo" && <TodoView scope={scope} uid={user.uid} profile={profile} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
+        {tab === "todo" && <TodoView scope={scope} pair={pair} uid={user.uid} profile={profile} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "journal" && <JournalView uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
         {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} partnerName={partnerName} dateKey={dateKey} color={color} pair={pair} />}
@@ -404,8 +398,6 @@ function ProfilePanel({
   onFontChange,
   requests,
   pair,
-  scopeMode,
-  onScopeMode,
 }: {
   user: User;
   profile: UserProfile;
@@ -414,8 +406,6 @@ function ProfilePanel({
   onFontChange: (key: FontKey) => void;
   requests: PairRequest[];
   pair: Pair | null;
-  scopeMode: "solo" | "pair";
-  onScopeMode: (mode: "solo" | "pair") => void;
 }) {
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
@@ -466,7 +456,7 @@ function ProfilePanel({
         {editing && (
           <div className="profile-settings">
             <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
-            <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={onScopeMode} color={color} />
+            <PairPanel requests={requests} pair={pair} color={color} />
           </div>
         )}
       </div>
@@ -659,7 +649,7 @@ function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (
   </section>;
 }
 
-function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequest[]; pair: Pair | null; mode: "solo" | "pair"; onMode: (mode: "solo" | "pair") => void; color: string }) {
+function PairPanel({ requests, pair, color }: { requests: PairRequest[]; pair: Pair | null; color: string }) {
   const [handle, setHandle] = useState("");
   const [message, setMessage] = useState("");
   async function send() {
@@ -668,7 +658,6 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
       const result = await createPairRequest(handle);
       setHandle("");
       if (result.alreadyConnected) {
-        onMode("pair");
         setMessage("이미 연결된 Twin을 다시 불러왔습니다.");
       } else {
         setMessage("요청을 보냈습니다.");
@@ -678,11 +667,10 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
     }
   }
   async function unlink() {
-    if (!pair || !window.confirm("연결된 파트너를 해제할까요? 공유 공간은 닫히고 혼자 사용 모드로 전환됩니다.")) return;
+    if (!pair || !window.confirm("연결된 파트너를 해제할까요? 이후 Share 공유가 중단됩니다.")) return;
     setMessage("");
     try {
       await disconnectPair(pair.id);
-      onMode("solo");
       setMessage("파트너 연결을 해제했습니다.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "연결 해제에 실패했습니다.");
@@ -690,11 +678,8 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
   }
   return (
     <section className="pair-panel">
-      <div className="scope-toggle">
-        <button style={mode === "solo" ? { background: color, color: "#fff" } : undefined} onClick={() => onMode("solo")}>solo</button>
-        <button style={mode === "pair" ? { background: color, color: "#fff" } : undefined} disabled={!pair} onClick={() => onMode("pair")}>pair</button>
-      </div>
       <span style={sectionLabel()}>ID로 연결</span>
+      {pair && <p className="tiny-note pair-status" style={{ color }}>연결됨 · Share로만 공유돼요</p>}
       {pair && <button className="unlink-btn" onClick={unlink}>연결된 파트너 해제</button>}
       <div className="tiny-form"><input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="상대 ID" /><button onClick={send}><Link2 size={14} /></button></div>
       {message && <p className="tiny-note">{message}</p>}
@@ -703,7 +688,7 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
   );
 }
 
-function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope: Scope; uid: string; profile: UserProfile; selectedDate: Date; dateKey: string; color: string }) {
+function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: { scope: Scope; pair: Pair | null; uid: string; profile: UserProfile; selectedDate: Date; dateKey: string; color: string }) {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [optimisticTodos, setOptimisticTodos] = useState<TodoItem[]>([]);
   const [labels, setLabels] = useState<CategoryLabels>(DEFAULT_CATEGORIES);
@@ -869,7 +854,7 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
     try {
       const payload = { todos: visible, note, color, labels, authorName: profile.displayName, authorNickname: profile.nickname, messages, updatedAt: null };
       await saveSharedDay(uid, dateKey, payload);
-      if (scope.type === "pair") await savePairSharedDay(scope.pairId, uid, dateKey, payload);
+      if (pair) await savePairSharedDay(pair.id, uid, dateKey, payload);
       alert("오늘의 공유 카드가 업데이트되었습니다.");
     } catch (err) {
       alert(err instanceof Error ? err.message : "공유 저장에 실패했습니다.");
