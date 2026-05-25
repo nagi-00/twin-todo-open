@@ -22,6 +22,12 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "DangamAsac";
+  src: url("/fonts/dangam-asac.ttf") format("truetype");
+  font-display: swap;
+}
+
 *,
 *::before,
 *::after {
@@ -991,6 +997,210 @@ select {
   border-radius: 0.4rem;
   padding: 0.45rem 0.55rem;
   resize: vertical;
+}
+
+.print-card {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 380px;
+  padding: 2.4rem 2rem 2.2rem;
+  font-family: var(--app-font, "LeeSeoyoon", sans-serif);
+  overflow: hidden;
+}
+
+.daylog-card {
+  background: #f3ecd9;
+  background-size: cover;
+  background-position: center;
+}
+
+.nightlog-card {
+  background: #06070f;
+  color: #fff;
+}
+
+.print-card-wash,
+.print-card-texture,
+.night-color-wash,
+.night-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.print-card-wash {
+  background: rgba(252, 247, 233, 0.22);
+  z-index: 0;
+}
+
+.print-card-texture {
+  background-size: cover;
+  background-position: center;
+  opacity: 0.32;
+  mix-blend-mode: multiply;
+  z-index: 2;
+}
+
+.night-color-wash {
+  opacity: 0.12;
+}
+
+.night-texture {
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+
+.print-card-body {
+  position: relative;
+  z-index: 1;
+}
+
+.print-title {
+  font-family: "DangamAsac", serif;
+  font-size: 3.2rem;
+  text-align: center;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.6rem;
+}
+
+.print-date {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.62rem;
+  text-align: center;
+  color: #6a6a6a;
+  letter-spacing: 0.08em;
+  margin-bottom: 1.1rem;
+}
+
+.nightlog-card .print-date {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.print-note {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.66rem;
+  color: #3a3a3a;
+  text-align: center;
+  font-style: italic;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin: 0 0.3rem 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed #99908266;
+}
+
+.print-list,
+.print-block p {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.74rem;
+  line-height: 1.95;
+}
+
+.print-list section,
+.print-block {
+  margin-bottom: 0.95rem;
+}
+
+.print-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.print-section-header span {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: -0.05em;
+}
+
+.print-section-header b {
+  flex-shrink: 0;
+  letter-spacing: 0.22em;
+  padding: 0 0.1rem;
+}
+
+.print-row {
+  display: grid;
+  grid-template-columns: 0.9rem 1fr auto;
+  gap: 0.45rem;
+  align-items: start;
+  padding: 0 0.25rem;
+  border-radius: 2px;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.74rem;
+  line-height: 1.95;
+}
+
+.print-row p,
+.print-block p {
+  white-space: pre-wrap;
+}
+
+.print-row small {
+  grid-column: 2 / 4;
+  color: #888;
+  font-size: 0.62rem;
+  font-style: italic;
+  line-height: 1.5;
+  margin-top: -0.2rem;
+}
+
+.print-total {
+  margin-top: 1.3rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed #999082aa;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.74rem;
+  display: flex;
+  justify-content: space-between;
+  color: #1a1a1a;
+}
+
+.print-total.night {
+  color: #fff;
+  border-top-color: rgba(255, 255, 255, 0.45);
+}
+
+.print-stamp,
+.print-credit {
+  text-align: center;
+  font-family: "Courier New", ui-monospace, monospace;
+  color: #3a3a3a;
+}
+
+.nightlog-card .print-stamp,
+.nightlog-card .print-credit,
+.nightlog-card .print-block p {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.print-stamp {
+  font-size: 0.66rem;
+  margin-top: 1.6rem;
+  letter-spacing: 0.14em;
+}
+
+.print-credit {
+  font-size: 0.55rem;
+  margin-top: 1.5rem;
+  letter-spacing: 0.22em;
+}
+
+.print-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 1.5rem 0;
+  font-size: 0.7rem;
 }
 
 @media (max-width: 700px) {

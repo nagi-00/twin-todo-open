@@ -1,4 +1,5 @@
 import { User } from "firebase/auth";
+import html2canvas from "html2canvas";
 import {
   Edit3,
   Eye,
@@ -12,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { isFirebaseConfigured } from "./firebase";
 import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
@@ -69,6 +70,14 @@ const CATEGORY_ACCENT: Record<CategoryKey, string> = {
   growth: "",
   freedom: "#4a7c5a",
 };
+const PAPER_TEXTURES = [
+  "/textures/papertex1.jpg",
+  "/textures/papertex2.jpg",
+  "/textures/papertex3.png",
+  "/textures/papertex4.jpg",
+  "/textures/papertex5.png",
+  "/textures/papertex6.jpg",
+];
 
 function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
   return {
@@ -86,6 +95,30 @@ function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
 
 function sectionLabel(extra?: CSSProperties) {
   return { fontSize: ".6rem", letterSpacing: ".2em", color: "#bbb", marginBottom: ".5rem", display: "block", ...extra };
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportElementAsPng(elementId: string, filename: string, backgroundColor: string) {
+  await document.fonts.ready;
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  const canvas = await html2canvas(element, { backgroundColor, scale: 2, useCORS: true });
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) return;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    alert("클립보드에 복사했습니다.");
+  } catch {
+    downloadBlob(blob, filename);
+  }
 }
 
 function ytEmbed(raw: string) {
@@ -518,6 +551,8 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   const [routineOpen, setRoutineOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [texture] = useState(() => PAPER_TEXTURES[Math.floor(Math.random() * PAPER_TEXTURES.length)]);
   const scopeKey = scope.type === "pair" ? `pair:${scope.pairId}` : `solo:${uid}`;
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
@@ -546,6 +581,14 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   async function shareToday() {
     await saveSharedDay(uid, dateKey, { todos: visible, note, color, messages: [], updatedAt: null });
     alert("오늘의 공유 카드가 업데이트되었습니다.");
+  }
+
+  async function printDaylog() {
+    setPrinting(true);
+    window.setTimeout(async () => {
+      await exportElementAsPng("xcard", `todo-${dateKey}.png`, "#fff");
+      setPrinting(false);
+    }, 100);
   }
 
   return (
@@ -599,7 +642,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
         })}
       </div>
       <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid #f5f5f5" }}>
-        <button onClick={() => alert("print 기능은 원본 카드 렌더링 포팅 중입니다.")} style={pill(color, "#fff")}>print!</button>
+        <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
         <button style={pill(color, "#fff")} onClick={shareToday}>Share</button>
         <button style={pill("#f5f5f5", "#aaa")} onClick={() => setRoutineOpen(true)}>루틴</button>
         {routines.length > 0 && <button style={pill("#f0f0f0", "#888", true)} onClick={applyRoutines}>루틴 적용</button>}
@@ -611,6 +654,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
       </div>
       {routineOpen && <RoutineModal uid={uid} routines={routines} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
+      {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible} labels={labels} color={color} texture={texture} />}
     </section>
   );
 }
@@ -670,9 +714,51 @@ function CategorySettings({ scope, labels, onClose }: { scope: Scope; labels: Ca
   return <div className="modal-backdrop" onClick={onClose}><section className="modal-card" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>카테고리명</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{CATEGORY_KEYS.map((key) => <label className="field" key={key}><span>{key}</span><input maxLength={12} value={draft[key]} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} /></label>)}<button className="dark-btn" onClick={save}>저장</button></section></div>;
 }
 
+function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLabel: string; note: string; todos: TodoItem[]; labels: CategoryLabels; color: string; texture: string }) {
+  const done = todos.filter((todo) => (todo.state ?? 0) === 1).length;
+  const stamp = new Date().toLocaleString("sv-SE").replace("T", " ").slice(2, 16).replace(/-/g, ".");
+  return <div id="xcard" className="print-card daylog-card" style={{ backgroundImage: `url("${texture}")` }}>
+    <div className="print-card-wash" />
+    <div className="print-card-body">
+      <div className="print-title" style={{ color }}>daylog</div>
+      <div className="print-date">{dateLabel}</div>
+      {note.trim() && <div className="print-note">« {note} »</div>}
+      <div className="print-list">
+        {CATEGORY_ORDER.map((key) => {
+          const list = todos.filter((todo) => todo.categoryKey === key);
+          if (!list.length) return null;
+          return <section key={key}>
+            <PrintSectionHeader label={labels[key]} color={CATEGORY_ACCENT[key] || color} />
+            {list.map((todo) => <div key={todo.id} className="print-row" style={{ color: (todo.state ?? 0) === 1 ? "#999" : "#1a1a1a", textDecoration: (todo.state ?? 0) === 1 ? "line-through" : "none", background: todo.important ? `${color}22` : "transparent" }}>
+              <span>{(todo.state ?? 0) === 0 ? "·" : (todo.state ?? 0) === 1 ? "✓" : "✗"}</span>
+              <p>{todo.hidden ? "비공개 항목입니다." : todo.title}</p>
+              {todo.important && !todo.hidden && <b style={{ color }}>★</b>}
+              {todo.memo && !todo.hidden && <small>└ {todo.memo}</small>}
+            </div>)}
+          </section>;
+        })}
+      </div>
+      <div className="print-total"><span>TOTAL    DONE</span><b style={{ color }}>{done} / {todos.length}</b></div>
+      <div className="print-stamp">{stamp}</div>
+      <div className="print-credit">TODOLIST BY ⓒnagi</div>
+    </div>
+    <div className="print-card-texture" style={{ backgroundImage: `url("${texture}")` }} />
+  </div>;
+}
+
+function PrintSectionHeader({ label, color }: { label: string; color: string }) {
+  return <div className="print-section-header" style={{ color }}>
+    <span>{"─".repeat(30)}</span>
+    <b>{label}</b>
+    <span>{"─".repeat(30)}</span>
+  </div>;
+}
+
 function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selectedDate: Date; dateKey: string; color: string }) {
   const [journal, setJournal] = useState<JournalEntry>({});
   const [daily, setDaily] = useState<DailyEntry>({});
+  const [printing, setPrinting] = useState(false);
+  const [texture] = useState(() => PAPER_TEXTURES[Math.floor(Math.random() * PAPER_TEXTURES.length)]);
   useEffect(() => subscribeJournal(uid, dateKey, setJournal), [uid, dateKey]);
   useEffect(() => subscribeDaily(uid, dateKey, setDaily), [uid, dateKey]);
   function updateJournal(patch: JournalEntry) {
@@ -685,13 +771,20 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
     setDaily(next);
     void saveDaily(uid, dateKey, next);
   }
+  async function printNightlog() {
+    setPrinting(true);
+    window.setTimeout(async () => {
+      await exportElementAsPng("bpcard", `nightlog-${dateKey}.png`, "#06070f");
+      setPrinting(false);
+    }, 100);
+  }
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const divider = { borderTop: `1px solid ${color}20`, margin: "1.25rem 0" };
   const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
       <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "#222" }}>{dateLabel}</h2>
-      <button style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
+      <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
     </div>
     <span style={label}>ᴍᴏʀɴɪɴɢ</span>
     <textarea value={journal.morning ?? ""} onChange={(e) => updateJournal({ morning: e.target.value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요. (Enter 저장)" />
@@ -716,11 +809,42 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
     <div style={divider} />
     <span style={label}>ᴅʀᴇᴀᴍ</span>
     <textarea value={daily.dream ?? ""} onChange={(e) => updateDaily({ dream: e.target.value })} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.' " rows={4} style={{ fontStyle: "italic" }} />
+    {printing && <NightlogCard dateLabel={dateLabel} journal={journal} daily={daily} color={color} texture={texture} />}
   </section>;
 }
 
 function MoodPicker({ value, onChange, color }: { value: string[]; onChange: (value: string[]) => void; color: string }) {
   return <div className="mood-row">{MOODS.map((mood) => <button key={mood} style={value.includes(mood) ? { background: color, color: "#fff" } : undefined} onClick={() => onChange(value.includes(mood) ? value.filter((v) => v !== mood) : [...value, mood])}>{mood}</button>)}</div>;
+}
+
+function NightlogCard({ dateLabel, journal, daily, color, texture }: { dateLabel: string; journal: JournalEntry; daily: DailyEntry; color: string; texture: string }) {
+  const gratitude = daily.gratitude || [];
+  const entries = [journal.morning, ...gratitude, daily.diary, daily.dream].filter((entry) => entry?.trim()).length + (daily.mood?.length ? 1 : 0);
+  const stamp = new Date().toLocaleString("sv-SE").replace("T", " ").slice(2, 16).replace(/-/g, ".");
+  return <div id="bpcard" className="print-card nightlog-card">
+    <div className="night-color-wash" style={{ background: color }} />
+    <div className="night-texture" style={{ backgroundImage: `url("${texture}")` }} />
+    <div className="print-card-body">
+      <div className="print-title" style={{ color }}>nightlog</div>
+      <div className="print-date">{dateLabel}</div>
+      {journal.morning?.trim() && <PrintBlock label="MORNING" color={color}>{journal.morning}</PrintBlock>}
+      {gratitude.some((entry) => entry?.trim()) && <PrintBlock label="GRATITUDE" color={color}>{gratitude.filter(Boolean).map((entry, index) => `${index + 1}. ${entry}`).join("\n")}</PrintBlock>}
+      {daily.diary?.trim() && <PrintBlock label="DIARY" color={color}>{daily.diary}</PrintBlock>}
+      {daily.mood?.length ? <PrintBlock label="MOOD" color={color}>{daily.mood.join(", ")}</PrintBlock> : null}
+      {daily.dream?.trim() && <PrintBlock label="DREAM" color={color}>{daily.dream}</PrintBlock>}
+      {!entries && <div className="print-empty">─ no entries today ─</div>}
+      <div className="print-total night"><span>TOTAL    ENTRIES</span><b style={{ color }}>{entries} / 5</b></div>
+      <div className="print-stamp">{stamp}</div>
+      <div className="print-credit">JOURNAL BY ⓒnagi</div>
+    </div>
+  </div>;
+}
+
+function PrintBlock({ label, color, children }: { label: string; color: string; children: ReactNode }) {
+  return <section className="print-block">
+    <PrintSectionHeader label={label} color={color} />
+    <p>{children}</p>
+  </section>;
 }
 
 function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
