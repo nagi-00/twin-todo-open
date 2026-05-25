@@ -72,6 +72,7 @@
   --muted-3: #ccc;
   --panel-border: #f0f0f0;
   --overlay-bg: rgba(0, 0, 0, 0.22);
+  --ui-font: "PretendardLocal", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 html[data-theme="dark"] {
@@ -145,6 +146,30 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+input,
+select,
+.tab-bar,
+.calendar-panel,
+.profile-settings,
+.modal-card,
+.widget-panel,
+.weather-widget,
+.music-widget,
+.pomo-widget,
+.demian-widget,
+.week-list,
+.shared-date,
+.shared-grid,
+.shared-section,
+.todo-share-btn,
+.routine-add,
+.timestamp-input button,
+.todo-input-card button,
+.footer-actions {
+  font-family: var(--ui-font);
 }
 
 button {
@@ -608,6 +633,21 @@ select {
   margin-bottom: 1rem;
   color: inherit;
   background: var(--field-bg);
+}
+
+.note-box,
+.editable-view,
+.note-view,
+.todo-input-card textarea,
+.timestamp-input textarea,
+.todo-item,
+.journal textarea,
+.shared-note,
+.shared-todo p,
+.shared-timeline-row p,
+.week-mini,
+.message-box {
+  font-family: var(--app-font, "LeeSeoyoon", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif);
 }
 
 .editable-view,
