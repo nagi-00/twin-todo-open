@@ -874,12 +874,15 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       {confettiNonce > 0 && <ThemeConfetti key={confettiNonce} color={color} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: ".5rem" }}>
         <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "#222" }}>{dateLabel}</h2>
-        <input
-          type="color"
-          value={color}
-          onChange={(event) => saveDateColor(uid, dateKey, event.target.value)}
-          style={{ width: "1.25rem", height: "1.25rem", border: "none", padding: 0, borderRadius: "9999px", cursor: "pointer", flexShrink: 0, marginTop: ".25rem" }}
-        />
+        <div className="todo-top-actions">
+          <button className="todo-share-btn" style={{ borderColor: `${color}55`, color }} onClick={shareToday}>Share</button>
+          <input
+            type="color"
+            value={color}
+            onChange={(event) => saveDateColor(uid, dateKey, event.target.value)}
+            style={{ width: "1.25rem", height: "1.25rem", border: "none", padding: 0, borderRadius: "9999px", cursor: "pointer", flexShrink: 0 }}
+          />
+        </div>
       </div>
 
       {visible.length > 0 && (
@@ -966,7 +969,6 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       </div>
       <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid #f5f5f5" }}>
         <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
-        <button style={pill(color, "#fff")} onClick={shareToday}>Share</button>
         <button style={pill("#f5f5f5", "#aaa")} onClick={() => setRoutineOpen(true)}>루틴</button>
         <div style={{ flex: 1 }} />
         {editMode && visible.length > 0 && <button style={pill("#fee2e2", "#ef4444")} onClick={archiveAll}>전체 삭제</button>}
