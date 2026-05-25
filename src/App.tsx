@@ -754,6 +754,11 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
     });
   }
 
+  function resetAppliedActions() {
+    localStorage.removeItem(appliedKey);
+    setAppliedActions({});
+  }
+
   async function submit(key: CategoryKey) {
     const text = inputs[key].trim();
     if (!text) return;
@@ -847,6 +852,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
   async function archiveAll() {
     if (!visible.length || !window.confirm("오늘 목록을 전부 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
     setTodos((prev) => prev.map((todo) => todo.status === "archived" ? todo : { ...todo, status: "archived" }));
+    resetAppliedActions();
     await Promise.all(visible.map((todo) => archiveTodo(scope, todo)));
   }
 
@@ -875,7 +881,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: ".5rem" }}>
         <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "#222" }}>{dateLabel}</h2>
         <div className="todo-top-actions">
-          <button className="todo-share-btn" style={{ borderColor: `${color}55`, color }} onClick={shareToday}>Share</button>
+          <button className="todo-share-btn" style={{ borderColor: `${color}55`, color, "--share-bg": `${color}1A`, "--share-bg-hover": `${color}26` } as CSSProperties} onClick={shareToday}>Share</button>
           <input
             type="color"
             value={color}

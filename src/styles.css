@@ -610,7 +610,7 @@ select {
 .todo-share-btn {
   border: 1px solid;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--share-bg, rgba(255, 255, 255, 0.42));
   padding: 0.24rem 0.62rem;
   font-size: 0.68rem;
   font-weight: 600;
@@ -620,7 +620,7 @@ select {
 
 .todo-share-btn:hover {
   opacity: 0.92;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--share-bg-hover, rgba(255, 255, 255, 0.78));
   transform: translateY(-1px);
 }
 
