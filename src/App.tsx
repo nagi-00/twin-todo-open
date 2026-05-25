@@ -121,7 +121,7 @@ function pill(bg = "var(--soft-bg)", fg = "var(--text-soft)", sm = false) {
 }
 
 function sectionLabel(extra?: CSSProperties) {
-  return { fontSize: ".6rem", letterSpacing: ".2em", color: "#bbb", marginBottom: ".5rem", display: "block", ...extra };
+  return { fontSize: ".6rem", letterSpacing: ".2em", color: "var(--muted-2)", marginBottom: ".5rem", display: "block", ...extra };
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -606,7 +606,7 @@ function CalendarPanel({ selectedDate, onSelect, colors, notes, accent }: { sele
   return (
     <section className="calendar-panel">
       <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-        <div style={{ fontSize: ".75rem", color: "#bbb", letterSpacing: ".05em", marginBottom: ".15rem" }}>{anchor.getFullYear()}</div>
+        <div style={{ fontSize: ".75rem", color: "var(--muted)", letterSpacing: ".05em", marginBottom: ".15rem" }}>{anchor.getFullYear()}</div>
         <div style={{ fontSize: "1.1rem", fontWeight: "bold", marginBottom: ".6rem" }}>{anchor.toLocaleDateString("en-US", { month: "long" })}</div>
         <div style={{ display: "flex", justifyContent: "center", gap: ".25rem" }}>
           <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} style={pill("var(--soft-bg)", "var(--muted)", true)}>←</button>
@@ -630,7 +630,7 @@ function CalendarPanel({ selectedDate, onSelect, colors, notes, accent }: { sele
               style={{
                 border: `1.5px solid ${isToday && !isSelected ? dayColor : "transparent"}`,
                 background: isSelected ? dayColor : "transparent",
-                color: isSelected ? "#fff" : isToday ? dayColor : "#444",
+                color: isSelected ? "#fff" : isToday ? dayColor : "var(--text-soft)",
                 fontWeight: isToday ? "bold" : 400,
               }}
               onClick={() => onSelect(cell)}
@@ -905,7 +905,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
     <section style={CARD}>
       {confettiNonce > 0 && <ThemeConfetti key={confettiNonce} color={color} origin={confettiOrigin} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: ".5rem" }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "#222" }}>{dateLabel}</h2>
+        <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "var(--text)" }}>{dateLabel}</h2>
         <div className="todo-top-actions">
           <button className="todo-share-btn" style={{ borderColor: `${color}55`, color, "--share-bg": `${color}1A`, "--share-bg-hover": `${color}26` } as CSSProperties} onClick={shareToday}>Share</button>
           <input
@@ -920,7 +920,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       {visible.length > 0 && (
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".25rem" }}>
-            <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "#ccc" }}>오늘의 완료율</span>
+            <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "var(--muted)" }}>오늘의 완료율</span>
             <span ref={pctRef} style={{ fontSize: ".62rem", fontWeight: "bold", color }}>{pct}%</span>
           </div>
           <div style={{ height: "2.5px", background: "var(--soft-bg)", borderRadius: "9999px", overflow: "hidden" }}>
@@ -1285,7 +1285,7 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-      <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "#222" }}>{dateLabel}</h2>
+      <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "var(--text)" }}>{dateLabel}</h2>
       <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
     </div>
     <span style={label}>ᴍᴏʀɴɪɴɢ</span>
@@ -1316,7 +1316,7 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
 }
 
 function MoodPicker({ value, onChange, color }: { value: string[]; onChange: (value: string[]) => void; color: string }) {
-  return <div className="mood-row">{MOODS.map((mood) => <button key={mood} style={value.includes(mood) ? { background: color, color: "#fff" } : undefined} onClick={() => onChange(value.includes(mood) ? value.filter((v) => v !== mood) : [...value, mood])}><span>{MOOD_ICONS[mood]}</span>{mood}</button>)}</div>;
+  return <div className="mood-row" style={{ "--mood-color": color } as CSSProperties}>{MOODS.map((mood) => <button key={mood} style={value.includes(mood) ? { background: color, color: "#fff" } : undefined} onClick={() => onChange(value.includes(mood) ? value.filter((v) => v !== mood) : [...value, mood])}><span>{MOOD_ICONS[mood]}</span>{mood}</button>)}</div>;
 }
 
 function NightlogCard({ dateLabel, journal, daily, color, texture }: { dateLabel: string; journal: JournalEntry; daily: DailyEntry; color: string; texture: string }) {
@@ -1365,7 +1365,7 @@ function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem" }}>
       <div>
         <span style={sectionLabel({ marginBottom: ".2rem" })}>ᴡᴇᴇᴋʟʏ ʀᴇᴠɪᴇᴡ</span>
-        <div style={{ fontSize: ".78rem", color: "#bbb" }}>{toDateKey(days[0])} - {toDateKey(days[6])}</div>
+        <div style={{ fontSize: ".78rem", color: "var(--muted)" }}>{toDateKey(days[0])} - {toDateKey(days[6])}</div>
       </div>
     </div>
     <div style={{ borderTop: "1px solid var(--soft-line)", marginBottom: "1rem" }} />
@@ -1397,9 +1397,9 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
           <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9999px", transition: "width .5s" }} />
         </div>
       </div>
-      <span style={{ fontSize: ".7rem", color: "#bbb", minWidth: "2rem", textAlign: "right" }}>{visible.length ? `${done}/${visible.length}` : "—"}</span>
+      <span style={{ fontSize: ".7rem", color: "var(--muted)", minWidth: "2rem", textAlign: "right" }}>{visible.length ? `${done}/${visible.length}` : "—"}</span>
     </div>
-    {note && !isFuture && <div style={{ fontSize: ".7rem", color: "#bbb", marginTop: ".22rem", paddingLeft: "4.9rem", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>"{note}"</div>}
+    {note && !isFuture && <div style={{ fontSize: ".7rem", color: "var(--muted)", marginTop: ".22rem", paddingLeft: "4.9rem", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>"{note}"</div>}
   </div>;
 }
 
@@ -1425,7 +1425,7 @@ function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKe
     return (
       <section style={{ ...CARD, textAlign: "center", padding: "3rem 1.5rem", color: "#bbb" }}>
         <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.45 }}>♡</div>
-        <h2 style={{ fontSize: "1.05rem", color: "#999", marginBottom: ".5rem" }}>파트너가 연결되지 않았어요.</h2>
+        <h2 style={{ fontSize: "1.05rem", color: "var(--muted)", marginBottom: ".5rem" }}>파트너가 연결되지 않았어요.</h2>
         <p style={{ fontSize: ".78rem", lineHeight: 1.8 }}>왼쪽 프로필 편집창에서 상대 ID로 연결 요청을 보낼 수 있어요.<br />혼자 사용은 계속 가능합니다.</p>
       </section>
     );

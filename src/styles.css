@@ -260,7 +260,7 @@ select {
 }
 
 .cal-grid.week {
-  color: #c5c5c5;
+  color: var(--muted);
   font-size: 0.62rem;
   margin: 0.85rem 0 0.35rem;
 }
@@ -272,7 +272,7 @@ select {
   border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
-  color: #555;
+  color: var(--text-soft);
   font-size: 0.75rem;
   position: relative;
   display: flex;
@@ -288,7 +288,7 @@ select {
 .pair-panel {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--soft-line);
 }
 
 .font-panel {
@@ -863,6 +863,16 @@ select {
 }
 
 .mood-row button {
+  background: color-mix(in srgb, var(--mood-color, var(--soft-bg)) 10%, var(--soft-bg));
+  color: color-mix(in srgb, var(--mood-color, var(--muted)) 52%, var(--text-soft));
+}
+
+html[data-theme="dark"] .mood-row button {
+  background: color-mix(in srgb, var(--mood-color, var(--soft-bg)) 18%, var(--soft-bg));
+  color: color-mix(in srgb, var(--mood-color, var(--text-soft)) 42%, #fff);
+}
+
+.mood-row button {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -973,7 +983,7 @@ select {
   grid-template-columns: auto 1fr auto;
   gap: 0.32rem;
   align-items: baseline;
-  color: #555;
+  color: var(--text-soft);
   font-size: 0.76rem;
   line-height: 1.55;
   margin-bottom: 0.24rem;
@@ -986,28 +996,28 @@ select {
 
 .shared-todo small {
   grid-column: 2 / -1;
-  color: #aaa;
+  color: var(--muted);
   font-size: 0.68rem;
   line-height: 1.45;
 }
 
 .shared-todo.private {
-  color: #ccc;
+  color: var(--muted-2);
   font-style: italic;
 }
 
 .shared-todo.private > span {
-  color: #ddd;
+  color: var(--muted);
 }
 
 .shared-section {
-  border-top: 1px solid #f2f2f2;
+  border-top: 1px solid var(--soft-line);
   padding-top: 1rem;
   margin-top: 1rem;
 }
 
 .shared-section h3 {
-  color: #bbb;
+  color: var(--muted);
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -1029,7 +1039,7 @@ select {
 }
 
 .shared-timeline-row span {
-  color: #bbb;
+  color: var(--muted);
   font-size: 0.65rem;
   white-space: nowrap;
 }
@@ -1040,13 +1050,13 @@ select {
 }
 
 .shared-timeline-row p {
-  color: #555;
+  color: var(--text-soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .shared-empty-line {
-  color: #c8c8c8;
+  color: var(--muted-2);
   font-size: 0.75rem;
 }
 
