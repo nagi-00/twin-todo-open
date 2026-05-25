@@ -730,7 +730,9 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
   const [appliedActions, setAppliedActions] = useState(() => readAppliedActions(appliedKey));
   const [applyingAction, setApplyingAction] = useState<null | "routines" | "x">(null);
   const [confettiNonce, setConfettiNonce] = useState(0);
+  const [confettiOrigin, setConfettiOrigin] = useState<{ x: number; y: number } | null>(null);
   const previousPct = useRef<number | null>(null);
+  const pctRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
   useEffect(() => {
@@ -763,6 +765,8 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
     const confettiKey = `twintodoConfetti:${scopeKey}:${dateKey}`;
     if (visible.length > 0 && pct === 100 && last !== null && last < 100 && sessionStorage.getItem(confettiKey) !== "1") {
       sessionStorage.setItem(confettiKey, "1");
+      const rect = pctRef.current?.getBoundingClientRect();
+      setConfettiOrigin(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null);
       setConfettiNonce((value) => value + 1);
     }
     previousPct.current = pct;
@@ -899,7 +903,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
 
   return (
     <section style={CARD}>
-      {confettiNonce > 0 && <ThemeConfetti key={confettiNonce} color={color} />}
+      {confettiNonce > 0 && <ThemeConfetti key={confettiNonce} color={color} origin={confettiOrigin} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: ".5rem" }}>
         <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "#222" }}>{dateLabel}</h2>
         <div className="todo-top-actions">
@@ -917,7 +921,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".25rem" }}>
             <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "#ccc" }}>오늘의 완료율</span>
-            <span style={{ fontSize: ".62rem", fontWeight: "bold", color }}>{pct}%</span>
+            <span ref={pctRef} style={{ fontSize: ".62rem", fontWeight: "bold", color }}>{pct}%</span>
           </div>
           <div style={{ height: "2.5px", background: "#f0f0f0", borderRadius: "9999px", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9999px", transition: "width .6s ease" }} />
@@ -1126,7 +1130,7 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
   </div>;
 }
 
-function ThemeConfetti({ color }: { color: string }) {
+function ThemeConfetti({ color, origin }: { color: string; origin: { x: number; y: number } | null }) {
   const pieces = useMemo(() => Array.from({ length: 22 }, (_, index) => ({
     angle: (Math.PI * 2 * index) / 22 + (Math.random() - 0.5) * 0.42,
     distance: 68 + Math.random() * 78,
@@ -1140,7 +1144,7 @@ function ThemeConfetti({ color }: { color: string }) {
     tint: index % 4 === 0 ? "#fff" : index % 3 === 0 ? `${color}aa` : index % 3 === 1 ? `${color}66` : color,
   })), [color]);
   return (
-    <div className="theme-confetti" style={{ "--burst-color": color } as CSSProperties} aria-hidden="true">
+    <div className="theme-confetti" style={{ "--burst-color": color, "--burst-x": origin ? `${origin.x}px` : "50%", "--burst-y": origin ? `${origin.y}px` : "38%" } as CSSProperties} aria-hidden="true">
       {pieces.map((piece, index) => (
         <i
           key={index}

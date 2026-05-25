@@ -746,8 +746,8 @@ select {
 .theme-confetti::after {
   content: "";
   position: absolute;
-  left: 50%;
-  top: 38%;
+  left: var(--burst-x, 50%);
+  top: var(--burst-y, 38%);
   width: 0.8rem;
   height: 0.8rem;
   border-radius: 9999px;
@@ -766,8 +766,8 @@ select {
 
 .theme-confetti i {
   position: absolute;
-  left: 50%;
-  top: 38%;
+  left: var(--burst-x, 50%);
+  top: var(--burst-y, 38%);
   display: block;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
   transform: translate3d(-50%, -50%, 0) scale(0.4) rotate(0deg);
