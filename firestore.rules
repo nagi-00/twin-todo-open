@@ -1,0 +1,183 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function hasVerifiedEmail() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
+    function pairExists(pairId) {
+      return exists(/databases/$(database)/documents/pairs/$(pairId));
+    }
+
+    function pairData(pairId) {
+      return get(/databases/$(database)/documents/pairs/$(pairId)).data;
+    }
+
+    function isPairMember(pairId) {
+      return signedIn()
+        && pairExists(pairId)
+        && pairData(pairId).memberMap[request.auth.uid] == true
+        && pairData(pairId).status == "active";
+    }
+
+    function validCategoryKey(value) {
+      return value in ["required", "growth", "freedom"];
+    }
+
+    function validTodoStatus(value) {
+      return value in ["open", "done", "archived"];
+    }
+
+    function validTodoTitle(value) {
+      return value is string && value.size() >= 1 && value.size() <= 120;
+    }
+
+    function validCategoryLabel(value) {
+      return value is string && value.size() >= 1 && value.size() <= 12;
+    }
+
+    function validCategorySettings() {
+      return request.resource.data.keys().hasOnly([
+          "required",
+          "growth",
+          "freedom",
+          "updatedBy",
+          "updatedAt"
+        ])
+        && request.resource.data.updatedBy == request.auth.uid
+        && validCategoryLabel(request.resource.data.required)
+        && validCategoryLabel(request.resource.data.growth)
+        && validCategoryLabel(request.resource.data.freedom);
+    }
+
+    function validTodoCreate(ownerUid) {
+      return request.resource.data.ownerUid == ownerUid
+        && validCategoryKey(request.resource.data.categoryKey)
+        && validTodoTitle(request.resource.data.title)
+        && request.resource.data.status == "open";
+    }
+
+    function validTodoUpdate() {
+      return request.resource.data.ownerUid == resource.data.ownerUid
+        && validCategoryKey(request.resource.data.categoryKey)
+        && validTodoTitle(request.resource.data.title)
+        && validTodoStatus(request.resource.data.status);
+    }
+
+    match /users/{uid} {
+      allow create: if isSelf(uid)
+        && hasVerifiedEmail()
+        && request.resource.data.keys().hasOnly([
+          "email",
+          "emailVerified",
+          "displayName",
+          "nickname",
+          "nicknameNormalized",
+          "avatarPath",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.emailVerified == request.auth.token.email_verified
+        && request.resource.data.role == "user"
+        && request.resource.data.nickname == null
+        && request.resource.data.nicknameNormalized == null;
+
+      allow read: if isSelf(uid);
+
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          "displayName",
+          "avatarPath",
+          "updatedAt"
+        ]);
+
+      allow delete: if false;
+
+      match /todos/{todoId} {
+        allow read: if isSelf(uid);
+        allow create: if isSelf(uid) && validTodoCreate(uid);
+        allow update: if isSelf(uid) && validTodoUpdate();
+        allow delete: if false;
+      }
+
+      match /settings/categories {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid) && validCategorySettings();
+        allow delete: if false;
+      }
+
+      match /journal/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /notes/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /routines/{routineId} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if isSelf(uid);
+      }
+
+      match /dateColors/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if isSelf(uid);
+      }
+    }
+
+    match /nicknames/{nicknameNormalized} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /pairRequests/{requestId} {
+      allow read: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+
+      allow create, update, delete: if false;
+    }
+
+    match /pairs/{pairId} {
+      allow read: if isPairMember(pairId);
+      allow create, update, delete: if false;
+
+      match /todos/{todoId} {
+        allow read: if isPairMember(pairId);
+        allow create: if isPairMember(pairId) && validTodoCreate(request.auth.uid);
+        allow update: if isPairMember(pairId) && validTodoUpdate();
+        allow delete: if false;
+      }
+
+      match /settings/categories {
+        allow read: if isPairMember(pairId);
+        allow create, update: if isPairMember(pairId) && validCategorySettings();
+        allow delete: if false;
+      }
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
