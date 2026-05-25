@@ -8,18 +8,17 @@ import {
   EyeOff,
   Link2,
   LogOut,
-  Music,
   Pause,
   Play,
-  Plus,
   RotateCcw,
   Settings,
   Upload,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { isFirebaseConfigured } from "./firebase";
-import { CATEGORY_COLORS, CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
+import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
 import { logout, signInWithGoogle, subscribeAuth } from "./services/auth";
 import { saveCategories, subscribeCategories } from "./services/categories";
@@ -53,6 +52,47 @@ const ADMIN_EMAIL = "mx.gin.xo@gmail.com";
 const BULLETS = ["☐", "☑", "☒"] as const;
 const WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
+const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
+const CATEGORY_ACCENT: Record<CategoryKey, string> = {
+  required: "#8A4545",
+  growth: "",
+  freedom: "#4a7c5a",
+};
+
+function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
+  return {
+    background: bg,
+    color: fg,
+    border: "none",
+    borderRadius: "9999px",
+    padding: sm ? ".28rem .7rem" : ".4rem .95rem",
+    fontSize: sm ? ".72rem" : ".78rem",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    letterSpacing: ".03em",
+  } as const;
+}
+
+function sectionLabel(extra?: CSSProperties) {
+  return { fontSize: ".6rem", letterSpacing: ".2em", color: "#bbb", marginBottom: ".5rem", display: "block", ...extra };
+}
+
+function ytEmbed(raw: string) {
+  try {
+    const u = new URL(raw.trim());
+    const v = u.searchParams.get("v");
+    const list = u.searchParams.get("list");
+    const sid = u.hostname === "youtu.be" ? u.pathname.slice(1).split("?")[0] : null;
+    const vid = v || sid;
+    const params = "autoplay=1&rel=0&modestbranding=1&enablejsapi=1";
+    if (vid && list) return `https://www.youtube.com/embed/${vid}?list=${list}&${params}`;
+    if (vid) return `https://www.youtube.com/embed/${vid}?${params}`;
+    if (list) return `https://www.youtube.com/embed/videoseries?list=${list}&${params}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function getErrorMessage(err: unknown) {
   if (err && typeof err === "object" && "code" in err) {
@@ -185,14 +225,18 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const color = dateColors[dateKey] || "#2d2d2d";
   const scope: Scope = useMemo(() => scopeMode === "pair" && pair ? { type: "pair", pairId: pair.id, uid: user.uid } : { type: "solo", uid: user.uid }, [scopeMode, pair, user.uid]);
 
+  const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
   return (
-    <div className="app">
+    <div className="app" style={{ display: "flex", minHeight: "100vh" }}>
       <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
       <div className={sidebarOpen ? "sidebar-overlay open" : "sidebar-overlay"} onClick={() => setSidebarOpen(false)} />
       <aside className={sidebarOpen ? "sidebar open" : "sidebar"}>
-        <ProfilePanel user={user} profile={profile} />
-        <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} accent={color} />
-        <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={setScopeMode} />
+        <div style={{ padding: "1.25rem 1rem 2rem" }}>
+          <ProfilePanel user={user} profile={profile} color={color} />
+          <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} accent={color} />
+          <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={setScopeMode} color={color} />
+        </div>
       </aside>
       <main className="main">
         <div className="tab-bar">
@@ -202,14 +246,14 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             ["week", "ᴡᴇᴇᴋ"],
             ["shared", "ᴛᴡɪɴ"],
           ].map(([key, label]) => (
-            <button key={key} className={tab === key ? "pill active" : "pill"} style={tab === key ? { background: color } : undefined} onClick={() => setTab(key as TabKey)}>{label}</button>
+            <button key={key} style={pill(tab === key ? color : "#f5f5f5", tab === key ? "#fff" : "#aaa")} onClick={() => setTab(key as TabKey)}>{label}</button>
           ))}
         </div>
 
-        <section className="date-card">
-          <div>
-            <h2>{selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</h2>
-            <span>{scope.type === "solo" ? "solo mode" : "pair mode"} · @{profile.nickname}</span>
+        <section className="date-card" style={{ borderTop: `3px solid ${color}` }}>
+          <div style={{ minWidth: 0 }}>
+            <h2>{dateLabel}</h2>
+            <span>{scope.type === "solo" ? "solo mode" : "pair mode"} / @{profile.nickname}</span>
           </div>
           <div className="date-actions">
             <button className="icon-btn" onClick={() => setSelectedDate((date) => addDays(date, -1))}><ChevronLeft size={15} /></button>
@@ -232,7 +276,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   );
 }
 
-function ProfilePanel({ user, profile }: { user: User; profile: UserProfile }) {
+function ProfilePanel({ user, profile, color }: { user: User; profile: UserProfile; color: string }) {
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -250,15 +294,29 @@ function ProfilePanel({ user, profile }: { user: User; profile: UserProfile }) {
 
   return (
     <section className="profile-panel">
-      <button className="avatar-btn" onClick={() => setEditorOpen(true)}>
+      <button className="avatar-btn" onClick={() => setEditorOpen(true)} title="프로필 이미지 편집">
         {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{profile.displayName.slice(0, 1).toUpperCase()}</span>}
       </button>
-      <div className="profile-text">
-        {editing ? <input value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && saveName()} /> : <b>{profile.displayName}</b>}
-        <span>@{profile.nickname}</span>
+      <div style={{ textAlign: "center", minWidth: 0 }}>
+        <div style={{ fontSize: ".75rem", color: "#bbb", letterSpacing: ".05em", marginBottom: ".35rem" }}>
+          {editing ? (
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && saveName()}
+              autoFocus
+              style={{ width: "100%", textAlign: "center", border: "1px solid #eee", borderRadius: "6px", padding: ".32rem .45rem", fontFamily: "inherit", fontSize: ".8rem", outline: "none" }}
+            />
+          ) : (
+            <>{profile.displayName}님의 공간</>
+          )}
+        </div>
+        <div style={{ fontSize: ".62rem", color: "#c6c6c6", letterSpacing: ".08em", marginBottom: ".45rem" }}>@{profile.nickname}</div>
+        <div style={{ display: "flex", gap: ".3rem", justifyContent: "center" }}>
+          <button onClick={logout} style={pill("#f5f5f5", "#aaa", true)}><LogOut size={12} /> 로그아웃</button>
+          <button onClick={editing ? saveName : () => setEditing(true)} style={pill(editing ? color : "#f5f5f5", editing ? "#fff" : "#aaa", true)}><Edit3 size={12} /> {editing ? "저장" : "편집"}</button>
+        </div>
       </div>
-      <button className="icon-btn" onClick={editing ? saveName : () => setEditing(true)}><Edit3 size={14} /></button>
-      <button className="icon-btn" onClick={logout}><LogOut size={14} /></button>
       {editorOpen && <AvatarEditor uid={user.uid} onClose={() => setEditorOpen(false)} />}
     </section>
   );
@@ -343,11 +401,15 @@ function CalendarPanel({ selectedDate, onSelect, colors, accent }: { selectedDat
   const cells = useMemo(() => monthMatrix(anchor), [anchor]);
   const selectedKey = toDateKey(selectedDate);
   return (
-    <section className="side-card">
-      <div className="month-head">
-        <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}>←</button>
-        <div><span>{anchor.getFullYear()}</span><b>{anchor.toLocaleDateString("en-US", { month: "long" })}</b></div>
-        <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}>→</button>
+    <section className="calendar-panel">
+      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <div style={{ fontSize: ".75rem", color: "#bbb", letterSpacing: ".05em", marginBottom: ".15rem" }}>{anchor.getFullYear()}</div>
+        <div style={{ fontSize: "1.1rem", fontWeight: "bold", marginBottom: ".6rem" }}>{anchor.toLocaleDateString("en-US", { month: "long" })}</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: ".25rem" }}>
+          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} style={pill("#f5f5f5", "#888", true)}>←</button>
+          <button onClick={() => { const now = new Date(); setAnchor(now); onSelect(now); }} style={pill("#f5f5f5", "#888", true)}>Today</button>
+          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))} style={pill("#f5f5f5", "#888", true)}>→</button>
+        </div>
       </div>
       <div className="cal-grid week">{["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}</div>
       <div className="cal-grid">
@@ -362,7 +424,7 @@ function CalendarPanel({ selectedDate, onSelect, colors, accent }: { selectedDat
   );
 }
 
-function PairPanel({ requests, pair, mode, onMode }: { requests: PairRequest[]; pair: Pair | null; mode: "solo" | "pair"; onMode: (mode: "solo" | "pair") => void }) {
+function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequest[]; pair: Pair | null; mode: "solo" | "pair"; onMode: (mode: "solo" | "pair") => void; color: string }) {
   const [handle, setHandle] = useState("");
   const [message, setMessage] = useState("");
   async function send() {
@@ -376,12 +438,12 @@ function PairPanel({ requests, pair, mode, onMode }: { requests: PairRequest[]; 
     }
   }
   return (
-    <section className="side-card">
+    <section className="pair-panel">
       <div className="scope-toggle">
-        <button className={mode === "solo" ? "active" : ""} onClick={() => onMode("solo")}>solo</button>
-        <button className={mode === "pair" ? "active" : ""} disabled={!pair} onClick={() => onMode("pair")}>pair</button>
+        <button style={mode === "solo" ? { background: color, color: "#fff" } : undefined} onClick={() => onMode("solo")}>solo</button>
+        <button style={mode === "pair" ? { background: color, color: "#fff" } : undefined} disabled={!pair} onClick={() => onMode("pair")}>pair</button>
       </div>
-      <span className="micro-label">ID로 연결</span>
+      <span style={sectionLabel()}>ID로 연결</span>
       <div className="tiny-form"><input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="상대 ID" /><button onClick={send}><Link2 size={14} /></button></div>
       {message && <p className="tiny-note">{message}</p>}
       {requests.map((req) => <div className="request" key={req.id}><span>@{req.fromNickname}</span><button onClick={() => acceptPairRequest(req.id)}>✓</button><button onClick={() => rejectPairRequest(req.id)}>×</button></div>)}
@@ -428,20 +490,49 @@ function TodoView({ scope, uid, dateKey, color }: { scope: Scope; uid: string; d
 
   return (
     <section className="main-card">
-      <div className="card-head"><div><span className="micro-label">오늘의 완료율</span><b>{pct}%</b></div><div className="button-row"><button className="soft-btn" onClick={() => setCatOpen(true)}><Settings size={14} />카테고리</button><button className="soft-btn" onClick={() => setRoutineOpen(true)}>루틴</button></div></div>
-      <div className="progress"><span style={{ width: `${pct}%`, background: color }} /></div>
-      <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} placeholder="오늘의 한마디" />
-      <div className="todo-columns">
-        {CATEGORY_KEYS.map((key) => <div className="todo-col" key={key}><h3 style={{ color: CATEGORY_COLORS[key] }}>{labels[key]}</h3><div className="tiny-form"><input value={inputs[key]} onChange={(event) => setInputs((prev) => ({ ...prev, [key]: event.target.value }))} onKeyDown={(event) => event.key === "Enter" && submit(key)} placeholder={`${labels[key]} 추가`} /><button onClick={() => submit(key)}><Plus size={14} /></button></div>{visible.filter((todo) => todo.categoryKey === key).map((todo) => <TodoRow key={todo.id} todo={todo} scope={scope} />)}</div>)}
+      <div style={{ marginBottom: "1rem" }}>
+        <span style={sectionLabel()}>오늘의 완료율</span>
+        <div style={{ display: "flex", alignItems: "center", gap: ".7rem" }}>
+          <div className="progress" style={{ flex: 1 }}><span style={{ width: `${pct}%`, background: color }} /></div>
+          <span style={{ fontSize: ".82rem", color, fontWeight: "bold", fontFamily: "monospace" }}>{pct}%</span>
+          <button style={pill("#f5f5f5", "#aaa", true)} onClick={() => setCatOpen(true)}><Settings size={12} /> 카테고리</button>
+        </div>
       </div>
-      <div className="footer-actions"><button onClick={applyRoutines}>오늘 루틴 적용</button><button onClick={shareToday}>오늘 공유하기</button></div>
+      <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} placeholder="오늘의 한마디" />
+      <div className="todo-input-grid">
+        {CATEGORY_ORDER.map((key) => (
+          <textarea
+            key={key}
+            value={inputs[key]}
+            onChange={(event) => setInputs((prev) => ({ ...prev, [key]: event.target.value }))}
+            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submit(key); } }}
+            placeholder={labels[key]}
+            rows={3}
+          />
+        ))}
+      </div>
+      <div>
+        {CATEGORY_ORDER.map((key, idx) => {
+          const catColor = CATEGORY_ACCENT[key] || color;
+          const list = visible.filter((todo) => todo.categoryKey === key);
+          return (
+            <div key={key} style={{ marginBottom: ".7rem" }}>
+              <span style={sectionLabel({ color: `${catColor}bb` })}>{labels[key]}</span>
+              {list.map((todo) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} />)}
+              {list.length === 0 && <div style={{ fontSize: ".75rem", color: "#e8e8e8", padding: ".1rem 0" }}>—</div>}
+              {idx < CATEGORY_ORDER.length - 1 && <div style={{ borderTop: `1px solid ${color}22`, margin: ".6rem 0" }} />}
+            </div>
+          );
+        })}
+      </div>
+      <div className="footer-actions"><button style={pill("#f0f0f0", "#888", true)} onClick={applyRoutines}>루틴 적용</button><button style={pill(color, "#fff", true)} onClick={shareToday}>Share</button><button style={pill("#f5f5f5", "#aaa", true)} onClick={() => setRoutineOpen(true)}>루틴</button></div>
       {routineOpen && <RoutineModal uid={uid} routines={routines} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
     </section>
   );
 }
 
-function TodoRow({ todo, scope }: { todo: TodoItem; scope: Scope }) {
+function TodoRow({ todo, scope, color }: { todo: TodoItem; scope: Scope; color: string }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(todo.title);
   const state = todo.state ?? (todo.status === "done" ? 1 : 0);
@@ -453,7 +544,13 @@ function TodoRow({ todo, scope }: { todo: TodoItem; scope: Scope }) {
     await updateTodoTitle(scope, todo, title);
     setEditing(false);
   }
-  return <div className={state === 1 ? "todo-item done" : state === 2 ? "todo-item crossed" : "todo-item"}><button onClick={cycle}>{BULLETS[state]}</button>{editing ? <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} /> : <span>{todo.hidden ? "숨긴 항목" : todo.title}</span>}<button onClick={() => updateTodoPatch(scope, todo, { hidden: !todo.hidden })}>{todo.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button><button onClick={editing ? save : () => setEditing(true)}><Edit3 size={13} /></button><button onClick={() => archiveTodo(scope, todo)}><X size={13} /></button></div>;
+  return <div className="todo-item" style={{ opacity: todo.hidden ? 0.4 : 1 }}>
+    <button className="bullet-btn" onClick={cycle} style={{ color }}>{BULLETS[state]}</button>
+    {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.hidden ? "숨긴 항목" : todo.title}</span>}
+    <button className="icon-btn" onClick={() => updateTodoPatch(scope, todo, { hidden: !todo.hidden })}>{todo.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+    <button className="icon-btn" onClick={editing ? save : () => setEditing(true)}><Edit3 size={13} /></button>
+    <button className="icon-btn" onClick={() => archiveTodo(scope, todo)}><X size={13} /></button>
+  </div>;
 }
 
 function CategorySettings({ scope, labels, onClose }: { scope: Scope; labels: CategoryLabels; onClose: () => void }) {
@@ -545,15 +642,38 @@ function MemoWidget() {
 function MusicWidget({ userId, color }: { userId: string; color: string }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [urlBar, setUrlBar] = useState(false);
   const [tracks, setTracks] = useState<string[]>(() => JSON.parse(localStorage.getItem(`ytplaylist_${userId}`) || "[]"));
+  const [current, setCurrent] = useState(0);
   function add() {
-    if (!input.trim()) return;
-    const next = [...tracks, input.trim()];
+    const embed = ytEmbed(input);
+    if (!embed) return;
+    const next = [...tracks, embed];
     setTracks(next);
     localStorage.setItem(`ytplaylist_${userId}`, JSON.stringify(next));
+    setCurrent(next.length - 1);
     setInput("");
+    setUrlBar(false);
   }
-  return <div className="music-widget"><button onClick={() => setOpen((v) => !v)}><Music size={13} />ᴍᴜsɪᴄ</button>{open && <div className="widget-panel music"><div className="tiny-form"><input value={input} onChange={(e) => setInput(e.target.value)} placeholder="YouTube URL" /><button onClick={add}>→</button></div>{tracks.map((t, i) => <p key={`${t}-${i}`} style={{ color }}>{`Track ${i + 1}`}</p>)}</div>}</div>;
+  function removeTrack(index: number) {
+    const next = tracks.filter((_, i) => i !== index);
+    setTracks(next);
+    localStorage.setItem(`ytplaylist_${userId}`, JSON.stringify(next));
+    setCurrent((value) => value >= next.length ? Math.max(0, next.length - 1) : value);
+  }
+  const currentEmbed = tracks[current];
+  return <div className="music-widget">
+    <button onClick={() => setOpen((v) => !v)}>
+      <span style={{ fontSize: "12px", color: currentEmbed ? color : "#ccc" }}>♪</span>
+      <span style={{ fontSize: "10px", color: "#bbb", letterSpacing: ".1em" }}>ᴍᴜsɪᴄ</span>
+    </button>
+    <div className="music-panel" style={{ left: open ? 0 : "-9999px" }}>
+      <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
+      {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="YouTube URL (영상·플레이리스트 모두 가능)" /><button onClick={add} style={{ background: color }}>→</button></div>}
+      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b>Track {i + 1}</b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.<br />음악도, 플레이리스트도 가능합니다.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
+      {currentEmbed && <iframe src={currentEmbed} width="290" height="163" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />}
+    </div>
+  </div>;
 }
 
 function PomodoroWidget({ color }: { color: string }) {
@@ -572,5 +692,5 @@ function PomodoroWidget({ color }: { color: string }) {
 
 function DemianWidget() {
   const [open, setOpen] = useState(false);
-  return <div className="demian-widget"><button onClick={() => setOpen((v) => !v)}>🖤</button>{open && <div className="widget-panel"><b>ᴅᴇᴍɪᴀɴ</b><p>관리자 전용 위젯입니다. 집중 시간 설정과 메시지 기능은 기존 흐름을 유지해 확장할 예정입니다.</p></div>}</div>;
+  return <div className="demian-widget"><button onClick={() => setOpen((v) => !v)}>🖤</button>{open && <div className="widget-panel demian-panel"><button>⚙ 설정</button><b>ᴅᴇᴍɪᴀɴ</b><p>관리자 전용 위젯입니다. 집중 시간 설정과 메시지 기능은 기존 흐름을 유지해 확장할 예정입니다.</p></div>}</div>;
 }
