@@ -53,6 +53,7 @@ const ADMIN_EMAIL = "mx.gin.xo@gmail.com";
 const BULLETS = ["☐", "☑", "☒"] as const;
 const WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
+const MOOD_ICONS: Record<string, string> = { 행복: "♡", 보통: "○", 슬픔: "⋯", 화남: "!", 설렘: "✦" };
 const DEF_SCHED: Record<number, { s: number; e: number }> = { 1: { s: 6, e: 13 }, 2: { s: 6, e: 18 }, 3: { s: 6, e: 13 }, 4: { s: 6, e: 18 }, 5: { s: 6, e: 21 } };
 const CARD: CSSProperties = {
   background: "#fff",
@@ -84,6 +85,10 @@ const PAPER_TEXTURES = [
 
 function isCoarsePointer() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
+
+function isComposing(event: KeyboardEvent<HTMLTextAreaElement> | KeyboardEvent<HTMLInputElement>) {
+  return Boolean((event.nativeEvent as { isComposing?: boolean }).isComposing);
 }
 
 function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
@@ -133,12 +138,12 @@ function ytEmbed(raw: string) {
     const u = new URL(raw.trim());
     const v = u.searchParams.get("v");
     const list = u.searchParams.get("list");
-    const sid = u.hostname === "youtu.be" ? u.pathname.slice(1).split("?")[0] : null;
+    const sid = u.hostname.includes("youtu.be") ? u.pathname.slice(1).split("?")[0] : null;
     const vid = v || sid;
-    const params = "autoplay=1&rel=0&modestbranding=1&enablejsapi=1";
-    if (vid && list) return `https://www.youtube.com/embed/${vid}?list=${list}&${params}`;
-    if (vid) return `https://www.youtube.com/embed/${vid}?${params}`;
-    if (list) return `https://www.youtube.com/embed/videoseries?list=${list}&${params}`;
+    const params = "rel=0&modestbranding=1&playsinline=1";
+    if (vid && list) return `https://www.youtube-nocookie.com/embed/${vid}?list=${list}&${params}`;
+    if (vid) return `https://www.youtube-nocookie.com/embed/${vid}?${params}`;
+    if (list) return `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${params}`;
     return null;
   } catch {
     return null;
@@ -616,9 +621,14 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
   async function send() {
     setMessage("");
     try {
-      await createPairRequest(handle);
+      const result = await createPairRequest(handle);
       setHandle("");
-      setMessage("요청을 보냈습니다.");
+      if (result.alreadyConnected) {
+        onMode("pair");
+        setMessage("이미 연결된 Twin을 다시 불러왔습니다.");
+      } else {
+        setMessage("요청을 보냈습니다.");
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "요청에 실패했습니다.");
     }
@@ -811,7 +821,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
           </div>
         </div>
       )}
-      <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} placeholder="오늘의 한마디" />
+      <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !isComposing(event)) { event.preventDefault(); event.currentTarget.blur(); } }} placeholder="오늘의 한마디" />
       <div className="todo-input-grid">
         {CATEGORY_ORDER.map((key) => (
           <div className="todo-input-card" key={key}>
@@ -860,7 +870,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
             value={messageInput}
             onChange={(event) => setMessageInput(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !isCoarsePointer()) {
+              if (event.key === "Enter" && !event.shiftKey && !isComposing(event)) {
                 event.preventDefault();
                 void sendTimestamp();
               }
@@ -882,7 +892,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
           {editMode ? "Done" : "Edit"}
         </button>
       </div>
-      {routineOpen && <RoutineModal uid={uid} routines={routines} onClose={() => setRoutineOpen(false)} />}
+      {routineOpen && <RoutineModal uid={uid} labels={labels} routines={routines} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
       {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible.filter((todo) => !todo.hidden)} labels={labels} color={color} texture={texture} />}
     </section>
@@ -1039,7 +1049,7 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   const divider = { borderTop: `1px solid ${color}20`, margin: "1.25rem 0" };
   const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
   function commitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey && !isCoarsePointer()) {
+    if (event.key === "Enter" && !event.shiftKey && !isComposing(event)) {
       event.preventDefault();
       event.currentTarget.blur();
     }
@@ -1077,12 +1087,18 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
 }
 
 function MoodPicker({ value, onChange, color }: { value: string[]; onChange: (value: string[]) => void; color: string }) {
-  return <div className="mood-row">{MOODS.map((mood) => <button key={mood} style={value.includes(mood) ? { background: color, color: "#fff" } : undefined} onClick={() => onChange(value.includes(mood) ? value.filter((v) => v !== mood) : [...value, mood])}>{mood}</button>)}</div>;
+  return <div className="mood-row">{MOODS.map((mood) => <button key={mood} style={value.includes(mood) ? { background: color, color: "#fff" } : undefined} onClick={() => onChange(value.includes(mood) ? value.filter((v) => v !== mood) : [...value, mood])}><span>{MOOD_ICONS[mood]}</span>{mood}</button>)}</div>;
 }
 
 function NightlogCard({ dateLabel, journal, daily, color, texture }: { dateLabel: string; journal: JournalEntry; daily: DailyEntry; color: string; texture: string }) {
   const gratitude = daily.gratitude || [];
-  const entries = [journal.morning, ...gratitude, daily.diary, daily.dream].filter((entry) => entry?.trim()).length + (daily.mood?.length ? 1 : 0);
+  const entries = [
+    journal.morning?.trim(),
+    gratitude.some((entry) => entry?.trim()) ? "gratitude" : "",
+    daily.diary?.trim(),
+    daily.mood?.length ? "mood" : "",
+    daily.dream?.trim(),
+  ].filter(Boolean).length;
   const stamp = new Date().toLocaleString("sv-SE").replace("T", " ").slice(2, 16).replace(/-/g, ".");
   return <div id="bpcard" className="print-card nightlog-card">
     <div className="night-color-wash" style={{ background: color }} />
@@ -1093,7 +1109,7 @@ function NightlogCard({ dateLabel, journal, daily, color, texture }: { dateLabel
       {journal.morning?.trim() && <PrintBlock label="MORNING" color={color}>{journal.morning}</PrintBlock>}
       {gratitude.some((entry) => entry?.trim()) && <PrintBlock label="GRATITUDE" color={color}>{gratitude.filter(Boolean).map((entry, index) => `${index + 1}. ${entry}`).join("\n")}</PrintBlock>}
       {daily.diary?.trim() && <PrintBlock label="DIARY" color={color}>{daily.diary}</PrintBlock>}
-      {daily.mood?.length ? <PrintBlock label="MOOD" color={color}>{daily.mood.join(", ")}</PrintBlock> : null}
+      {daily.mood?.length ? <PrintBlock label="MOOD" color={color}>{daily.mood.map((mood) => `${MOOD_ICONS[mood] || "•"} ${mood}`).join("   ")}</PrintBlock> : null}
       {daily.dream?.trim() && <PrintBlock label="DREAM" color={color}>{daily.dream}</PrintBlock>}
       {!entries && <div className="print-empty">─ no entries today ─</div>}
       <div className="print-total night"><span>TOTAL    ENTRIES</span><b style={{ color }}>{entries} / 5</b></div>
@@ -1182,7 +1198,7 @@ function SharedView({ uid, dateKey, color, pair }: { uid: string; dateKey: strin
   </section>;
 }
 
-function RoutineModal({ uid, routines, onClose }: { uid: string; routines: Routine[]; onClose: () => void }) {
+function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels: CategoryLabels; routines: Routine[]; onClose: () => void }) {
   const [text, setText] = useState("");
   const [categoryKey, setCategoryKey] = useState<CategoryKey>("required");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
@@ -1196,11 +1212,14 @@ function RoutineModal({ uid, routines, onClose }: { uid: string; routines: Routi
     setWeekdays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day].sort());
   }
   return <div className="modal-backdrop" onClick={onClose}><section className="modal-card routine-modal" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>루틴</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>
-    <div className="routine-list">{routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{DEFAULT_CATEGORIES[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>)}</div>
-    <input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="새 루틴" />
-    <div className="button-row"><select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{DEFAULT_CATEGORIES[k]}</option>)}</select><select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select></div>
-    {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
-    <button className="dark-btn" onClick={add}>추가</button></section></div>;
+    <div className="routine-form">
+      <input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="새 루틴" />
+      <div className="routine-selects"><select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{labels[k]}</option>)}</select><select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select></div>
+      {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
+      <button className="dark-btn" onClick={add}>루틴 추가</button>
+    </div>
+    <div className="routine-list">{routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{labels[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>)}</div>
+  </section></div>;
 }
 
 function MemoWidget({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -1247,7 +1266,7 @@ function MusicWidget({ userId, color, open, onToggle }: { userId: string; color:
       <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
       {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="YouTube URL (영상·플레이리스트 모두 가능)" /><button onClick={add} style={{ background: color }}>→</button></div>}
       {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b>Track {i + 1}</b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.<br />음악도, 플레이리스트도 가능합니다.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
-      {currentEmbed && <iframe src={currentEmbed} width="290" height="163" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />}
+      {currentEmbed && <iframe src={currentEmbed} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
     </div>
   </div>;
 }
@@ -1363,12 +1382,12 @@ function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolea
   const ss = (left % 60).toString().padStart(2, "0");
   const progress = Math.max(0, Math.min(1, 1 - left / (minutes[mode] * 60)));
   const modeLabel = mode === "focus" ? "focus" : mode === "short" ? "short rest" : "long rest";
-  return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button onClick={onToggle}>◷</button>{open && <div className="widget-panel pomo-panel">
+  return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button className={running && !open ? "pomo-live" : ""} onClick={onToggle}><span>◷</span>{running && !open && <b>{mm}:{ss}</b>}</button>{open && <div className="widget-panel pomo-panel">
     <div className="pomo-modes">{(["focus", "short", "long"] as const).map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => selectMode(item)}>{item}</button>)}</div>
     <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, #f1f1f1 0deg)` }}>
       <div><b>{mm}:{ss}</b><span>{running ? "running" : modeLabel}</span></div>
     </div>
-    <div className="button-row"><button style={{ background: color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
+    <div className="button-row pomo-controls"><button style={{ color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button style={{ color }} onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button style={{ color }} onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
     {settingsOpen && <div className="pomo-settings">{(["focus", "short", "long"] as const).map((item) => <label key={item}><span>{item}</span><input value={minutes[item]} onChange={(event) => updateMinutes(item, event.target.value)} /></label>)}</div>}
   </div>}</div>;
 }

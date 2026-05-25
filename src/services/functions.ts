@@ -17,7 +17,7 @@ export async function changeNickname(nickname: string) {
 }
 
 export async function createPairRequest(nickname: string) {
-  const fn = callable<{ nickname: string }, { requestId: string }>("createPairRequest");
+  const fn = callable<{ nickname: string }, { requestId: string; pairId?: string; alreadyConnected?: boolean }>("createPairRequest");
   return (await fn({ nickname })).data;
 }
 

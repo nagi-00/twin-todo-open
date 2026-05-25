@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, DocumentReference } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 initializeApp();
@@ -57,6 +57,30 @@ async function getUserNickname(uid: string) {
 
 function buildPairKey(uidA: string, uidB: string) {
   return [uidA, uidB].sort().join("__");
+}
+
+function activePairPatch(uidA: string, uidB: string) {
+  return {
+    members: [uidA, uidB],
+    pairKey: buildPairKey(uidA, uidB),
+    memberMap: {
+      [uidA]: true,
+      [uidB]: true,
+    },
+    status: "active",
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+async function ensurePairReadable(pairRef: DocumentReference, uidA: string, uidB: string) {
+  await pairRef.set(activePairPatch(uidA, uidB), { merge: true });
+  await pairRef.collection("settings").doc("categories").set({
+    required: "필연",
+    growth: "성장",
+    freedom: "자유",
+    updatedBy: uidA,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
 }
 
 export const claimNickname = onCall(callableOptions, async (request) => {
@@ -153,7 +177,11 @@ export const createPairRequest = onCall(callableOptions, async (request) => {
     .limit(1)
     .get();
 
-  if (!existingPair.empty) throw new HttpsError("already-exists", "이미 연결된 사용자입니다.");
+  if (!existingPair.empty) {
+    const pairDoc = existingPair.docs[0];
+    await ensurePairReadable(pairDoc.ref, fromUid, toUid);
+    return { requestId: "", pairId: pairDoc.id, alreadyConnected: true };
+  }
 
   const duplicate = await db.collection("pairRequests")
     .where("fromUid", "==", fromUid)
@@ -198,15 +226,8 @@ export const acceptPairRequest = onCall(callableOptions, async (request) => {
 
     const pairRef = db.collection("pairs").doc();
     tx.set(pairRef, {
-      members: [data.fromUid, data.toUid],
-      pairKey: buildPairKey(data.fromUid, data.toUid),
-      memberMap: {
-        [data.fromUid]: true,
-        [data.toUid]: true,
-      },
-      status: "active",
+      ...activePairPatch(data.fromUid, data.toUid),
       createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
     });
     tx.update(requestRef, {
       status: "accepted",
