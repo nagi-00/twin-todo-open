@@ -436,7 +436,7 @@ select {
 
 .default-color-row {
   display: grid;
-  grid-template-columns: 2.15rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
   gap: 0.35rem;
   align-items: center;
 }
@@ -463,7 +463,6 @@ select {
 
 .default-color-row .save-default-color {
   color: #fff;
-  min-width: 3.5rem;
 }
 
 .font-panel > div {

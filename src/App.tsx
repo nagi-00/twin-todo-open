@@ -576,7 +576,7 @@ function ProfilePanel({
         {editing && (
           <div className="profile-settings">
             <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
-            <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} currentColor={color} />
+            <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} />
             <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
             <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
             <PairPanel requests={requests} pair={pair} color={color} />
@@ -907,7 +907,7 @@ function ThemePanel({ darkMode, onChange, color }: { darkMode: boolean; onChange
   </section>;
 }
 
-function DefaultThemeColorPanel({ uid, value, currentColor }: { uid: string; value: string; currentColor: string }) {
+function DefaultThemeColorPanel({ uid, value }: { uid: string; value: string }) {
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
 
@@ -927,7 +927,6 @@ function DefaultThemeColorPanel({ uid, value, currentColor }: { uid: string; val
       <span style={sectionLabel()}>default color</span>
       <div className="default-color-row">
         <input type="color" value={draft} onChange={(event) => setDraft(event.target.value)} aria-label="기본 테마색" />
-        <button type="button" onClick={() => setDraft(currentColor)}>오늘 색 가져오기</button>
         <button type="button" className="save-default-color" onClick={save} style={{ background: draft }}>{saved ? "저장됨" : "저장"}</button>
       </div>
     </section>
