@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import { isFirebaseConfigured } from "./firebase";
 import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
@@ -291,10 +291,18 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
       <div className={sidebarOpen ? "sidebar-overlay open" : "sidebar-overlay"} onClick={() => setSidebarOpen(false)} />
       <aside className={sidebarOpen ? "sidebar open" : "sidebar"}>
         <div style={{ padding: "1.25rem 1rem 2rem" }}>
-          <ProfilePanel user={user} profile={profile} color={color} />
+          <ProfilePanel
+            user={user}
+            profile={profile}
+            color={color}
+            fontKey={fontKey}
+            onFontChange={setFontKey}
+            requests={requests}
+            pair={pair}
+            scopeMode={scopeMode}
+            onScopeMode={setScopeMode}
+          />
           <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />
-          <FontPanel fontKey={fontKey} onChange={setFontKey} color={color} />
-          <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={setScopeMode} color={color} />
         </div>
       </aside>
       <main className="main main-content">
@@ -331,7 +339,27 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   );
 }
 
-function ProfilePanel({ user, profile, color }: { user: User; profile: UserProfile; color: string }) {
+function ProfilePanel({
+  user,
+  profile,
+  color,
+  fontKey,
+  onFontChange,
+  requests,
+  pair,
+  scopeMode,
+  onScopeMode,
+}: {
+  user: User;
+  profile: UserProfile;
+  color: string;
+  fontKey: FontKey;
+  onFontChange: (key: FontKey) => void;
+  requests: PairRequest[];
+  pair: Pair | null;
+  scopeMode: "solo" | "pair";
+  onScopeMode: (mode: "solo" | "pair") => void;
+}) {
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -371,6 +399,12 @@ function ProfilePanel({ user, profile, color }: { user: User; profile: UserProfi
           <button onClick={logout} style={pill("#f5f5f5", "#aaa", true)}><LogOut size={12} /> 로그아웃</button>
           <button onClick={editing ? saveName : () => setEditing(true)} style={pill(editing ? color : "#f5f5f5", editing ? "#fff" : "#aaa", true)}><Edit3 size={12} /> {editing ? "저장" : "편집"}</button>
         </div>
+        {editing && (
+          <div className="profile-settings">
+            <FontPanel fontKey={fontKey} onChange={onFontChange} color={color} />
+            <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={onScopeMode} color={color} />
+          </div>
+        )}
       </div>
       {editorOpen && <AvatarEditor uid={user.uid} onClose={() => setEditorOpen(false)} />}
     </section>
@@ -387,6 +421,7 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
   const [flipX, setFlipX] = useState(false);
   const [flipY, setFlipY] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dragRef = useRef<{ x: number; y: number; baseX: number; baseY: number } | null>(null);
 
   useEffect(() => {
     if (!src || !canvasRef.current) return;
@@ -419,6 +454,28 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
     reader.readAsDataURL(file);
   }
 
+  function resetEdits() {
+    setShape("circle");
+    setAngle(0);
+    setScale(1);
+    setX(0);
+    setY(0);
+    setFlipX(false);
+    setFlipY(false);
+  }
+
+  function startDrag(event: PointerEvent<HTMLCanvasElement>) {
+    if (!src) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { x: event.clientX, y: event.clientY, baseX: x, baseY: y };
+  }
+
+  function moveDrag(event: PointerEvent<HTMLCanvasElement>) {
+    if (!dragRef.current) return;
+    setX(Math.max(-120, Math.min(120, dragRef.current.baseX + event.clientX - dragRef.current.x)));
+    setY(Math.max(-120, Math.min(120, dragRef.current.baseY + event.clientY - dragRef.current.y)));
+  }
+
   async function save() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -432,19 +489,39 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
     <div className="modal-backdrop" onClick={onClose}>
       <section className="avatar-editor modal-card" onClick={(event) => event.stopPropagation()}>
         <div className="modal-head"><b>프로필 이미지 편집</b><button className="icon-btn" onClick={onClose}><X size={15} /></button></div>
-        <canvas ref={canvasRef} width={256} height={256} className={shape === "circle" ? "avatar-canvas circle" : "avatar-canvas"} />
-        {!src && <label className="upload-drop"><Upload size={18} />이미지 선택<input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>}
-        <div className="editor-grid">
-          <label>회전<input type="range" min="-180" max="180" value={angle} onChange={(event) => setAngle(Number(event.target.value))} /></label>
-          <label>확대<input type="range" min="0.6" max="2.4" step="0.05" value={scale} onChange={(event) => setScale(Number(event.target.value))} /></label>
-          <label>좌우<input type="range" min="-80" max="80" value={x} onChange={(event) => setX(Number(event.target.value))} /></label>
-          <label>상하<input type="range" min="-80" max="80" value={y} onChange={(event) => setY(Number(event.target.value))} /></label>
-        </div>
-        <div className="button-row">
-          <button className="soft-btn" onClick={() => setFlipX((v) => !v)}>좌우반전</button>
-          <button className="soft-btn" onClick={() => setFlipY((v) => !v)}>상하반전</button>
-          <button className="soft-btn" onClick={() => setShape((v) => v === "circle" ? "square" : "circle")}>{shape === "circle" ? "정사각" : "원형"}</button>
-          <button className="dark-btn inline" onClick={save} disabled={!src}>저장</button>
+        <div className="avatar-editor-layout">
+          <div>
+            <canvas
+              ref={canvasRef}
+              width={256}
+              height={256}
+              className={shape === "circle" ? "avatar-canvas circle" : "avatar-canvas"}
+              onPointerDown={startDrag}
+              onPointerMove={moveDrag}
+              onPointerUp={() => { dragRef.current = null; }}
+              onPointerCancel={() => { dragRef.current = null; }}
+            />
+            <div className="avatar-hint">{src ? "이미지를 드래그해서 위치를 조정하세요." : "이미지를 선택하면 미리보기가 표시됩니다."}</div>
+            <label className="upload-drop"><Upload size={16} />{src ? "다른 이미지 선택" : "이미지 선택"}<input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>
+          </div>
+          <div className="avatar-controls">
+            <div className="segmented">
+              <button className={shape === "circle" ? "active" : ""} onClick={() => setShape("circle")}>원형</button>
+              <button className={shape === "square" ? "active" : ""} onClick={() => setShape("square")}>정사각</button>
+            </div>
+            <div className="editor-grid">
+              <label><span>회전 {angle}°</span><input type="range" min="-180" max="180" value={angle} onChange={(event) => setAngle(Number(event.target.value))} /></label>
+              <label><span>확대 {Math.round(scale * 100)}%</span><input type="range" min="0.6" max="2.8" step="0.05" value={scale} onChange={(event) => setScale(Number(event.target.value))} /></label>
+              <label><span>좌우 {x}</span><input type="range" min="-120" max="120" value={x} onChange={(event) => setX(Number(event.target.value))} /></label>
+              <label><span>상하 {y}</span><input type="range" min="-120" max="120" value={y} onChange={(event) => setY(Number(event.target.value))} /></label>
+            </div>
+            <div className="button-row">
+              <button className={flipX ? "soft-btn active" : "soft-btn"} onClick={() => setFlipX((v) => !v)}>좌우반전</button>
+              <button className={flipY ? "soft-btn active" : "soft-btn"} onClick={() => setFlipY((v) => !v)}>상하반전</button>
+              <button className="soft-btn" onClick={resetEdits}>초기화</button>
+            </div>
+            <button className="dark-btn avatar-save" onClick={save} disabled={!src}>저장</button>
+          </div>
         </div>
       </section>
     </div>

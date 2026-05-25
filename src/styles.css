@@ -140,10 +140,13 @@ select {
   top: 0;
   bottom: 0;
   width: 14.5rem;
+  max-width: calc(100vw - 18px);
   background: #fff;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 20;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  overscroll-behavior: contain;
 }
 
 .main {
@@ -167,6 +170,14 @@ select {
   text-align: center;
   margin-bottom: 1rem;
   padding-top: 0.6rem;
+}
+
+.profile-settings {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+  text-align: left;
 }
 
 .avatar-btn {
@@ -238,6 +249,18 @@ select {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
   border-top: 1px solid #f5f5f5;
+}
+
+.profile-settings .font-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.profile-settings .pair-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top-color: #eee;
 }
 
 .font-panel > div {
@@ -590,21 +613,39 @@ select {
 }
 
 .avatar-editor {
-  text-align: center;
+  width: min(620px, 100%);
+  text-align: left;
+}
+
+.avatar-editor-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: start;
 }
 
 .avatar-canvas {
   display: block;
   width: 256px;
   height: 256px;
-  margin: 1rem auto;
+  margin: 0 auto 0.5rem;
   background: #f4f4f4;
   border: 1px solid #eee;
   border-radius: 12px;
+  touch-action: none;
+  cursor: grab;
 }
 
 .avatar-canvas.circle {
   border-radius: 50%;
+}
+
+.avatar-hint {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  margin-bottom: 0.65rem;
 }
 
 .upload-drop {
@@ -616,21 +657,64 @@ select {
   border-radius: 10px;
   padding: 0.8rem 1rem;
   color: #888;
+  width: 100%;
+  cursor: pointer;
+}
+
+.avatar-controls {
+  min-width: 0;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  background: #f5f5f5;
+  border-radius: 9999px;
+  margin-bottom: 0.8rem;
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #aaa;
+  padding: 0.38rem 0.5rem;
+  font-size: 0.76rem;
+}
+
+.segmented button.active {
+  background: #2d2d2d;
+  color: #fff;
 }
 
 .editor-grid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.7rem;
   margin: 0.8rem 0;
   text-align: left;
 }
 
 .editor-grid label {
   display: grid;
-  grid-template-columns: 3rem 1fr;
-  align-items: center;
+  gap: 0.25rem;
   color: #888;
   font-size: 0.78rem;
+}
+
+.editor-grid input[type="range"] {
+  width: 100%;
+  accent-color: #2d2d2d;
+}
+
+.soft-btn.active {
+  background: #e8e8e8;
+  color: #555;
+}
+
+.avatar-save {
+  margin-top: 0.8rem;
 }
 
 .memo-widget,
@@ -695,8 +779,8 @@ select {
 
 .weather-panel {
   position: absolute;
-  bottom: auto;
-  top: 42px;
+  bottom: 42px;
+  top: auto;
   left: 0;
   width: 160px;
   background: #fff;
@@ -755,8 +839,8 @@ select {
 
 .pomo-widget .widget-panel,
 .demian-widget .widget-panel {
-  bottom: auto;
-  top: 42px;
+  bottom: 42px;
+  top: auto;
   left: 0;
   margin-top: 0;
 }
@@ -770,8 +854,8 @@ select {
 
 .music-panel {
   position: absolute;
-  bottom: auto;
-  top: 42px;
+  bottom: 42px;
+  top: auto;
   width: 290px;
   background: #fff;
   border-radius: 12px;
@@ -1219,6 +1303,7 @@ select {
   }
 
   .sidebar {
+    width: min(14.5rem, calc(100vw - 18px));
     transform: translateX(-100%);
     transition: transform 0.25s ease;
   }
@@ -1245,6 +1330,10 @@ select {
   }
 
   .todo-input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-editor-layout {
     grid-template-columns: 1fr;
   }
 
