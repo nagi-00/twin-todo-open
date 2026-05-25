@@ -58,22 +58,22 @@
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --page-bg: #191817;
-  --center-bg: linear-gradient(135deg, #181716 0%, #22201e 100%);
-  --card-bg: #252321;
-  --card-shadow: 0 1px 9px rgba(0, 0, 0, 0.34);
-  --surface-bg: #201f1e;
-  --soft-bg: #302d2a;
-  --field-bg: #1f1e1d;
-  --line: rgba(255, 255, 255, 0.12);
-  --soft-line: rgba(255, 255, 255, 0.08);
-  --text: #eee9e3;
-  --text-soft: #d8d0c7;
-  --muted: #a99f95;
-  --muted-2: #91877f;
-  --muted-3: #776f68;
-  --panel-border: rgba(255, 255, 255, 0.1);
-  --overlay-bg: rgba(0, 0, 0, 0.52);
+  --page-bg: #2f2d2a;
+  --center-bg: linear-gradient(135deg, #34312e 0%, #3a3632 100%);
+  --card-bg: #3b3733;
+  --card-shadow: 0 1px 12px rgba(20, 16, 12, 0.22);
+  --surface-bg: #34312e;
+  --soft-bg: #4a4641;
+  --field-bg: #332f2c;
+  --line: rgba(255, 255, 255, 0.18);
+  --soft-line: rgba(255, 255, 255, 0.12);
+  --text: #f2ece4;
+  --text-soft: #ddd4ca;
+  --muted: #c4b9ae;
+  --muted-2: #aaa096;
+  --muted-3: #8f857b;
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --overlay-bg: rgba(37, 33, 30, 0.56);
 }
 
 body {
@@ -1061,14 +1061,14 @@ select {
   align-items: center;
   gap: 0.65rem;
   font-size: 0.72rem;
-  color: #999;
+  color: var(--muted);
 }
 
 .shared-progress-row > div {
   height: 3px;
   overflow: hidden;
   border-radius: 9999px;
-  background: #f0f0f0;
+  background: var(--soft-bg);
 }
 
 .shared-progress-row i {
@@ -1104,10 +1104,10 @@ select {
 }
 
 .routine-form {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 0.75rem;
-  background: linear-gradient(180deg, #fff, #fafafa);
+  background: linear-gradient(180deg, var(--card-bg), var(--field-bg));
   margin-bottom: 0.75rem;
 }
 
@@ -1352,8 +1352,8 @@ select {
 }
 
 .soft-btn.active {
-  background: #e8e8e8;
-  color: #555;
+  background: var(--line);
+  color: var(--text-soft);
 }
 
 .avatar-save {
@@ -1399,13 +1399,13 @@ select {
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  background: #fff;
+  background: var(--card-bg);
   border: none;
   border-radius: 9999px;
   padding: 0.38rem 0.85rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   font-family: inherit;
-  color: #bbb;
+  color: var(--muted-2);
 }
 
 .pomo-widget > button {
@@ -1414,7 +1414,7 @@ select {
 
 .pomo-widget > button.pomo-live {
   min-width: 5.4rem;
-  color: #777;
+  color: var(--text-soft);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1754,10 +1754,10 @@ select {
 
 .music-empty button {
   margin-top: 4px;
-  background: #f5f5f5;
+  background: var(--soft-bg);
   border: none;
   border-radius: 9999px;
-  color: #aaa;
+  color: var(--muted);
   font-size: 10px;
   padding: 0.3rem 0.75rem;
 }

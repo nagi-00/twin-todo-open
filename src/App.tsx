@@ -461,8 +461,8 @@ function ProfilePanel({
         <div style={{ fontSize: ".62rem", color: "#c6c6c6", letterSpacing: ".08em", marginBottom: ".45rem" }}>@{profile.nickname}</div>
         {editing && <p className="tiny-note" style={{ textAlign: "center", margin: "0 0 .45rem" }}>ID는 연결 보안을 위해 변경할 수 없습니다.</p>}
         <div style={{ display: "flex", gap: ".3rem", justifyContent: "center" }}>
-          <button onClick={logout} style={pill("#f5f5f5", "#aaa", true)}><LogOut size={12} /> 로그아웃</button>
-          <button onClick={editing ? saveName : () => setEditing(true)} style={pill(editing ? color : "#f5f5f5", editing ? "#fff" : "#aaa", true)}><Edit3 size={12} /> {editing ? "저장" : "편집"}</button>
+          <button onClick={logout} style={pill("var(--soft-bg)", "var(--muted)", true)}><LogOut size={12} /> 로그아웃</button>
+          <button onClick={editing ? saveName : () => setEditing(true)} style={pill(editing ? color : "var(--soft-bg)", editing ? "#fff" : "var(--muted)", true)}><Edit3 size={12} /> {editing ? "저장" : "편집"}</button>
         </div>
         {editing && (
           <div className="profile-settings">
@@ -609,12 +609,12 @@ function CalendarPanel({ selectedDate, onSelect, colors, notes, accent }: { sele
         <div style={{ fontSize: ".75rem", color: "#bbb", letterSpacing: ".05em", marginBottom: ".15rem" }}>{anchor.getFullYear()}</div>
         <div style={{ fontSize: "1.1rem", fontWeight: "bold", marginBottom: ".6rem" }}>{anchor.toLocaleDateString("en-US", { month: "long" })}</div>
         <div style={{ display: "flex", justifyContent: "center", gap: ".25rem" }}>
-          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} style={pill("#f5f5f5", "#888", true)}>←</button>
-          <button onClick={() => { const now = new Date(); setAnchor(now); onSelect(now); }} style={pill("#f5f5f5", "#888", true)}>Today</button>
-          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))} style={pill("#f5f5f5", "#888", true)}>→</button>
+          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} style={pill("var(--soft-bg)", "var(--muted)", true)}>←</button>
+          <button onClick={() => { const now = new Date(); setAnchor(now); onSelect(now); }} style={pill("var(--soft-bg)", "var(--muted)", true)}>Today</button>
+          <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))} style={pill("var(--soft-bg)", "var(--muted)", true)}>→</button>
         </div>
       </div>
-      <button onClick={() => setNotesList((value) => !value)} style={{ ...pill("#f7f7f7", "#aaa", true), width: "100%", marginBottom: ".75rem", borderRadius: ".4rem", textAlign: "center" }}>{notesList ? "← back" : "Notes"}</button>
+      <button onClick={() => setNotesList((value) => !value)} style={{ ...pill("var(--soft-bg)", "var(--muted)", true), width: "100%", marginBottom: ".75rem", borderRadius: ".4rem", textAlign: "center" }}>{notesList ? "← back" : "Notes"}</button>
       {!notesList ? <>
         <div className="cal-grid week">{["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}</div>
         <div className="cal-grid">
@@ -655,7 +655,7 @@ function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (
     <span style={sectionLabel()}>font</span>
     <div>
       {FONT_OPTIONS.map((font) => (
-        <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "#f5f5f5", fontKey === font.key ? "#fff" : "#aaa", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
+        <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "var(--soft-bg)", fontKey === font.key ? "#fff" : "var(--muted)", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
       ))}
     </div>
   </section>;
@@ -923,7 +923,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
             <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "#ccc" }}>오늘의 완료율</span>
             <span ref={pctRef} style={{ fontSize: ".62rem", fontWeight: "bold", color }}>{pct}%</span>
           </div>
-          <div style={{ height: "2.5px", background: "#f0f0f0", borderRadius: "9999px", overflow: "hidden" }}>
+          <div style={{ height: "2.5px", background: "var(--soft-bg)", borderRadius: "9999px", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9999px", transition: "width .6s ease" }} />
           </div>
         </div>
@@ -975,7 +975,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
         })}
       </div>
       <div className="todo-quick-actions">
-        {!appliedActions.x && <button disabled={applyingAction === "x"} onClick={applyYesterdayX} style={pill("#f0f0f0", "#888", true)}>☒ 적용</button>}
+        {!appliedActions.x && <button disabled={applyingAction === "x"} onClick={applyYesterdayX} style={pill("var(--soft-bg)", "var(--muted)", true)}>☒ 적용</button>}
         {!appliedActions.routines && dueRoutines.length > 0 && <button disabled={applyingAction === "routines"} style={pill(color, "#fff", true)} onClick={applyRoutines}>루틴 적용</button>}
       </div>
       <div className="timestamp-box">
@@ -999,13 +999,13 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
           <button onClick={sendTimestamp}>stamp</button>
         </div>
       </div>
-      <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid #f5f5f5" }}>
+      <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid var(--soft-line)" }}>
         <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
-        <button style={pill("#f5f5f5", "#aaa")} onClick={() => setRoutineOpen(true)}>루틴</button>
+        <button style={pill("var(--soft-bg)", "var(--muted)")} onClick={() => setRoutineOpen(true)}>루틴</button>
         <div style={{ flex: 1 }} />
         {editMode && visible.length > 0 && <button style={pill("#fee2e2", "#ef4444")} onClick={archiveAll}>전체 삭제</button>}
-        {editMode && <button style={pill("#f5f5f5", "#aaa")} onClick={() => setCatOpen(true)}>카테고리</button>}
-        <button onClick={() => setEditMode((value) => !value)} style={pill(editMode ? "#e8e8e8" : "#f5f5f5", editMode ? "#555" : "#bbb")}>
+        {editMode && <button style={pill("var(--soft-bg)", "var(--muted)")} onClick={() => setCatOpen(true)}>카테고리</button>}
+        <button onClick={() => setEditMode((value) => !value)} style={pill(editMode ? "var(--line)" : "var(--soft-bg)", editMode ? "var(--text-soft)" : "var(--muted-2)")}>
           {editMode ? "Done" : "Edit"}
         </button>
       </div>
@@ -1368,7 +1368,7 @@ function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
         <div style={{ fontSize: ".78rem", color: "#bbb" }}>{toDateKey(days[0])} - {toDateKey(days[6])}</div>
       </div>
     </div>
-    <div style={{ borderTop: "1px solid #f0f0f0", marginBottom: "1rem" }} />
+    <div style={{ borderTop: "1px solid var(--soft-line)", marginBottom: "1rem" }} />
     {days.map((date) => <WeekDayMini key={toDateKey(date)} uid={uid} date={date} color={dateColors[toDateKey(date)] || "#2d2d2d"} />)}
   </section>;
 }
@@ -1389,11 +1389,11 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
   return <div style={{ padding: ".5rem .65rem", borderRadius: ".4rem", marginBottom: ".3rem", border: `1.5px solid ${isToday ? color : "transparent"}`, background: isToday ? `${color}07` : "transparent", opacity: isFuture ? 0.32 : 1 }}>
     <div style={{ display: "flex", alignItems: "center", gap: ".55rem" }}>
       <div style={{ minWidth: "4.2rem", display: "flex", gap: ".3rem", alignItems: "baseline" }}>
-        <span style={{ fontSize: ".67rem", color: "#bbb" }}>{date.toLocaleString("en-US", { weekday: "short" })}</span>
-        <span style={{ fontSize: ".88rem", fontWeight: isToday ? "bold" : 500, color: isToday ? color : "#333" }}>{date.getDate()}</span>
+        <span style={{ fontSize: ".67rem", color: "var(--muted-2)" }}>{date.toLocaleString("en-US", { weekday: "short" })}</span>
+        <span style={{ fontSize: ".88rem", fontWeight: isToday ? "bold" : 500, color: isToday ? color : "var(--text)" }}>{date.getDate()}</span>
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ height: "2.5px", background: "#f0f0f0", borderRadius: "9999px", overflow: "hidden" }}>
+        <div style={{ height: "2.5px", background: "var(--soft-bg)", borderRadius: "9999px", overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9999px", transition: "width .5s" }} />
         </div>
       </div>
@@ -1707,7 +1707,7 @@ function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolea
   const modeLabel = mode === "focus" ? "focus" : mode === "short" ? "short rest" : "long rest";
   return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button className={running && !open ? "pomo-live" : ""} onClick={onToggle}><span>◷</span>{running && !open && <b>{mm}:{ss}</b>}</button>{open && <div className="widget-panel pomo-panel">
     <div className="pomo-modes">{(["focus", "short", "long"] as const).map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => selectMode(item)}>{item}</button>)}</div>
-    <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, #f1f1f1 0deg)` }}>
+    <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, var(--soft-bg) 0deg)` }}>
       <div><b>{mm}:{ss}</b><span>{running ? "running" : modeLabel}</span></div>
     </div>
     <div className="button-row pomo-controls"><button style={{ color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button style={{ color }} onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button style={{ color }} onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
