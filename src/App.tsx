@@ -58,9 +58,9 @@ const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
 const MOOD_ICONS: Record<string, string> = { 행복: "♡", 보통: "○", 슬픔: "⋯", 화남: "!", 설렘: "✦" };
 const DEF_SCHED: Record<number, { s: number; e: number }> = { 1: { s: 6, e: 13 }, 2: { s: 6, e: 18 }, 3: { s: 6, e: 13 }, 4: { s: 6, e: 18 }, 5: { s: 6, e: 21 } };
 const CARD: CSSProperties = {
-  background: "#fff",
+  background: "var(--card-bg)",
   borderRadius: "10px",
-  boxShadow: "0 1px 5px rgba(0,0,0,0.07)",
+  boxShadow: "var(--card-shadow)",
   padding: "1.5rem",
 };
 const FONT_OPTIONS = [
@@ -106,7 +106,7 @@ function isComposing(event: KeyboardEvent<HTMLTextAreaElement> | KeyboardEvent<H
   return Boolean((event.nativeEvent as { isComposing?: boolean }).isComposing);
 }
 
-function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
+function pill(bg = "var(--soft-bg)", fg = "var(--text-soft)", sm = false) {
   return {
     background: bg,
     color: fg,
@@ -308,6 +308,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeWidget, setActiveWidget] = useState<null | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("twintodoTheme") === "dark");
   const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
@@ -334,6 +335,10 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
     document.documentElement.dataset.font = found.key;
     localStorage.setItem("twintodoFont", found.key);
   }, [fontKey]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+    localStorage.setItem("twintodoTheme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   const dateKey = toDateKey(selectedDate);
   const color = dateColors[dateKey] || "#2d2d2d";
@@ -351,6 +356,8 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             color={color}
             fontKey={fontKey}
             onFontChange={setFontKey}
+            darkMode={darkMode}
+            onDarkMode={setDarkMode}
             requests={requests}
             pair={pair}
           />
@@ -368,7 +375,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             <button
               key={key}
               style={{
-                ...pill(tab === key ? color : "#fff", tab === key ? "#fff" : "#bbb"),
+                ...pill(tab === key ? color : "var(--card-bg)", tab === key ? "#fff" : "var(--muted)"),
                 boxShadow: tab === key ? `0 2px 8px ${color}44` : "0 1px 3px rgba(0,0,0,0.08)",
                 transition: "all .2s",
               }}
@@ -396,6 +403,8 @@ function ProfilePanel({
   color,
   fontKey,
   onFontChange,
+  darkMode,
+  onDarkMode,
   requests,
   pair,
 }: {
@@ -404,6 +413,8 @@ function ProfilePanel({
   color: string;
   fontKey: FontKey;
   onFontChange: (key: FontKey) => void;
+  darkMode: boolean;
+  onDarkMode: (value: boolean) => void;
   requests: PairRequest[];
   pair: Pair | null;
 }) {
@@ -455,6 +466,7 @@ function ProfilePanel({
         </div>
         {editing && (
           <div className="profile-settings">
+            <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
             <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
             <PairPanel requests={requests} pair={pair} color={color} />
           </div>
@@ -646,6 +658,16 @@ function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (
         <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "#f5f5f5", fontKey === font.key ? "#fff" : "#aaa", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
       ))}
     </div>
+  </section>;
+}
+
+function ThemePanel({ darkMode, onChange, color }: { darkMode: boolean; onChange: (value: boolean) => void; color: string }) {
+  return <section className="theme-panel">
+    <span style={sectionLabel()}>theme</span>
+    <button className={darkMode ? "theme-toggle active" : "theme-toggle"} onClick={() => onChange(!darkMode)} style={{ "--theme-color": color } as CSSProperties}>
+      <span />
+      <b>{darkMode ? "dark" : "light"}</b>
+    </button>
   </section>;
 }
 
