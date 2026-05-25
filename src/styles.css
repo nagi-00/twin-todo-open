@@ -1561,11 +1561,18 @@ select {
   width: 2.15rem;
   height: 2.15rem;
   padding: 0;
-  background: #fff;
+  background: var(--soft-bg);
   border: 1px solid var(--line);
+  color: var(--pomo-accent, var(--text-soft));
   display: inline-grid;
   place-items: center;
   line-height: 1;
+}
+
+html[data-theme="dark"] .pomo-controls button {
+  background: color-mix(in srgb, var(--pomo-accent, var(--text)) 28%, var(--field-bg));
+  border-color: color-mix(in srgb, var(--pomo-accent, var(--text)) 36%, var(--line));
+  color: #fff;
 }
 
 .pomo-controls button:last-child {

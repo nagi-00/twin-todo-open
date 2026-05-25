@@ -1710,7 +1710,7 @@ function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolea
     <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, var(--soft-bg) 0deg)` }}>
       <div><b>{mm}:{ss}</b><span>{running ? "running" : modeLabel}</span></div>
     </div>
-    <div className="button-row pomo-controls"><button style={{ color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button style={{ color }} onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button style={{ color }} onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
+    <div className="button-row pomo-controls" style={{ "--pomo-accent": color } as CSSProperties}><button onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
     {settingsOpen && <div className="pomo-settings">{(["focus", "short", "long"] as const).map((item) => <label key={item}><span>{item}</span><input value={minutes[item]} onChange={(event) => updateMinutes(item, event.target.value)} /></label>)}</div>}
   </div>}</div>;
 }
