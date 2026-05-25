@@ -722,6 +722,8 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   const appliedKey = `twintodoApplied:${scopeKey}:${dateKey}`;
   const [appliedActions, setAppliedActions] = useState(() => readAppliedActions(appliedKey));
   const [applyingAction, setApplyingAction] = useState<null | "routines" | "x">(null);
+  const [confettiNonce, setConfettiNonce] = useState(0);
+  const previousPct = useRef<number | null>(null);
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
   useEffect(() => {
@@ -748,6 +750,16 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
   const dueRoutines = routines.filter((r) => (r.frequency || r.freq) === "daily" || (r.weekdays || [r.weekday]).includes(dayOfWeek));
+
+  useEffect(() => {
+    const last = previousPct.current;
+    const confettiKey = `twintodoConfetti:${scopeKey}:${dateKey}`;
+    if (visible.length > 0 && pct === 100 && last !== null && last < 100 && sessionStorage.getItem(confettiKey) !== "1") {
+      sessionStorage.setItem(confettiKey, "1");
+      setConfettiNonce((value) => value + 1);
+    }
+    previousPct.current = pct;
+  }, [dateKey, pct, scopeKey, visible.length]);
 
   function markApplied(action: "routines" | "x") {
     setAppliedActions((prev) => {
@@ -874,6 +886,7 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
 
   return (
     <section style={CARD}>
+      {confettiNonce > 0 && <ThemeConfetti key={confettiNonce} color={color} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: ".5rem" }}>
         <h2 style={{ fontSize: "1rem", fontWeight: "bold", lineHeight: 1.5, flex: 1, color: "#222" }}>{dateLabel}</h2>
         <input
@@ -1098,6 +1111,40 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
   </div>;
 }
 
+function ThemeConfetti({ color }: { color: string }) {
+  const pieces = useMemo(() => Array.from({ length: 22 }, (_, index) => ({
+    left: 8 + Math.random() * 84,
+    delay: Math.random() * 0.18,
+    drift: (Math.random() - 0.5) * 90,
+    rotate: Math.random() * 260,
+    width: 3 + Math.random() * 5,
+    height: 6 + Math.random() * 8,
+    opacity: 0.35 + Math.random() * 0.38,
+    radius: Math.random() > 0.6 ? "999px" : "2px",
+    tint: index % 3 === 0 ? `${color}99` : index % 3 === 1 ? `${color}66` : color,
+  })), [color]);
+  return (
+    <div className="theme-confetti" aria-hidden="true">
+      {pieces.map((piece, index) => (
+        <i
+          key={index}
+          style={{
+            left: `${piece.left}%`,
+            animationDelay: `${piece.delay}s`,
+            "--drift": `${piece.drift}px`,
+            "--spin": `${piece.rotate}deg`,
+            width: `${piece.width}px`,
+            height: `${piece.height}px`,
+            opacity: piece.opacity,
+            borderRadius: piece.radius,
+            background: piece.tint,
+          } as CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 function PrintSectionHeader({ label, color }: { label: string; color: string }) {
   return <div className="print-section-header" style={{ color }}>
     <span>{"─".repeat(30)}</span>
@@ -1125,10 +1172,15 @@ function EditableBlock({
   viewStyle?: CSSProperties;
   textareaStyle?: CSSProperties;
 }) {
-  const [editing, setEditing] = useState(!value.trim());
+  const [editing, setEditing] = useState(false);
+  const userEditing = useRef(false);
 
   useEffect(() => {
-    if (!value.trim()) setEditing(true);
+    if (!value.trim()) {
+      setEditing(true);
+      return;
+    }
+    if (!userEditing.current) setEditing(false);
   }, [value]);
 
   if (!editing) {
@@ -1138,11 +1190,16 @@ function EditableBlock({
         onDoubleClick={() => setEditing(true)}
         onTouchEnd={(event) => {
           event.preventDefault();
+          userEditing.current = true;
           setEditing(true);
         }}
         onContextMenu={(event) => {
           event.preventDefault();
+          userEditing.current = true;
           setEditing(true);
+        }}
+        onMouseDown={() => {
+          userEditing.current = true;
         }}
       >
         <div style={viewStyle}>{value.trim() ? value : <span>{placeholder}</span>}</div>
@@ -1154,15 +1211,20 @@ function EditableBlock({
     <textarea
       className={className}
       value={value}
+      onFocus={() => {
+        userEditing.current = true;
+      }}
       onChange={(event) => onChange(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === "Enter" && (event.shiftKey || event.ctrlKey || event.metaKey) && !isComposing(event)) {
           event.preventDefault();
+          userEditing.current = false;
           setEditing(false);
           event.currentTarget.blur();
         }
       }}
       onBlur={() => {
+        userEditing.current = false;
         if (value.trim()) setEditing(false);
       }}
       placeholder={placeholder}

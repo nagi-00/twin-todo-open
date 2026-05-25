@@ -599,6 +599,37 @@ select {
   margin-top: 0.3rem;
 }
 
+.theme-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.theme-confetti i {
+  position: absolute;
+  top: -18px;
+  display: block;
+  transform: translate3d(0, 0, 0) rotate(0deg);
+  animation: theme-confetti-fall 1.55s cubic-bezier(0.18, 0.82, 0.34, 1) forwards;
+}
+
+@keyframes theme-confetti-fall {
+  0% {
+    transform: translate3d(0, -10px, 0) rotate(0deg);
+  }
+
+  42% {
+    transform: translate3d(calc(var(--drift) * 0.45), 22vh, 0) rotate(calc(var(--spin) * 0.5));
+  }
+
+  100% {
+    transform: translate3d(var(--drift), 54vh, 0) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
 .footer-actions {
   display: flex;
   justify-content: flex-end;
