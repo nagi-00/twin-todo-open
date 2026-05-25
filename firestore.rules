@@ -10,10 +10,6 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function hasVerifiedEmail() {
-      return signedIn() && request.auth.token.email_verified == true;
-    }
-
     function pairExists(pairId) {
       return exists(/databases/$(database)/documents/pairs/$(pairId));
     }
@@ -75,7 +71,6 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow create: if isSelf(uid)
-        && hasVerifiedEmail()
         && request.resource.data.keys().hasOnly([
           "email",
           "emailVerified",
@@ -89,6 +84,7 @@ service cloud.firestore {
         ])
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.emailVerified == request.auth.token.email_verified
+        && request.resource.data.emailVerified is bool
         && request.resource.data.role == "user"
         && request.resource.data.nickname == null
         && request.resource.data.nicknameNormalized == null;
