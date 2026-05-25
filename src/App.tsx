@@ -338,10 +338,10 @@ function LoginScreen() {
   return (
     <main className="center-screen">
       <section className="login-card">
-        <div className="login-mark">𝘁𝘄𝗶𝗻-𝘁𝗼𝗱𝗼</div>
-        <p>혼자 조용히 쓰다가, 원하면 서로의 하루를 연결하세요.</p>
+        <div className="login-mark">𝘁𝘄𝗶𝗻-𝘁𝗼𝗱𝗼 ♡ </div>
+        <p>차곡차곡 쌓아가는 나, 혹은 우리의 하루. </p>
         <button className="dark-btn" onClick={handleLogin} disabled={busy}>
-          {busy ? "입장 중..." : "Google로 입장하기"}
+          {busy ? "Now loading..." : "Sign in with Google"}
         </button>
         {error && <p className="error-text">{error}</p>}
       </section>
@@ -369,12 +369,12 @@ function HandleOnboarding({ displayName }: { displayName: string }) {
   return (
     <main className="center-screen">
       <section className="login-card">
-        <span className="micro-label">first step</span>
+        <span className="micro-label">First todo</span>
         <h1>ID 만들기</h1>
-        <p>이 ID는 @nagi처럼 표시되고, 다른 사용자가 연결 요청을 보낼 때 쓰는 고유 핸들이에요. 한 번 만들면 변경할 수 없습니다.</p>
+        <p>이 ID는 @ID처럼 표시되고, 다른 사용자가 연결 요청을 보낼 때 쓰는 고유 핸들입니다. 한 번 만들면 변경할 수 없습니다. </p>
         <input className="soft-input" value={handle} maxLength={20} onChange={(event) => setHandle(event.target.value)} onKeyDown={(event) => event.key === "Enter" && submit()} />
         <button className="dark-btn" onClick={submit} disabled={busy || handle.trim().length < 2}>
-          {busy ? "확인 중..." : "시작하기"}
+          {busy ? "Checking..." : "Get Started"}
         </button>
         {error && <p className="error-text">{error}</p>}
       </section>
@@ -662,7 +662,7 @@ function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: s
               onPointerUp={() => { dragRef.current = null; }}
               onPointerCancel={() => { dragRef.current = null; }}
             />
-            <div className="avatar-hint">{src ? "이미지를 드래그해서 위치를 조정하세요." : "이미지를 선택하면 미리보기가 표시됩니다."}</div>
+            <div className="avatar-hint">{src ? "이미지를 드래그해서 위치를 조정할 수 있습니다." : "이미지를 선택하면 미리보기가 표시됩니다."}</div>
             <label className="upload-drop"><Upload size={16} />{src ? "다른 이미지 선택" : "이미지 선택"}<input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>
           </div>
           <div className="avatar-controls">
@@ -679,9 +679,9 @@ function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: s
             <div className="button-row">
               <button className={flipX ? "soft-btn active" : "soft-btn"} onClick={() => setFlipX((v) => !v)}>좌우반전</button>
               <button className={flipY ? "soft-btn active" : "soft-btn"} onClick={() => setFlipY((v) => !v)}>상하반전</button>
-              <button className="soft-btn" onClick={resetEdits}>초기화</button>
+              <button className="soft-btn" onClick={resetEdits}>reset</button>
             </div>
-            <button className="dark-btn avatar-save" onClick={save} disabled={!src}>저장</button>
+            <button className="dark-btn avatar-save" onClick={save} disabled={!src}>save</button>
           </div>
         </div>
       </section>
@@ -772,29 +772,29 @@ function PairPanel({ requests, pair, color }: { requests: PairRequest[]; pair: P
       const result = await createPairRequest(handle);
       setHandle("");
       if (result.alreadyConnected) {
-        setMessage("이미 연결된 Twin을 다시 불러왔습니다.");
+        setMessage("이미 연결된 ID를 다시 불러왔습니다.");
       } else {
-        setMessage("요청을 보냈습니다.");
+        setMessage("연결 요청을 보냈습니다. ");
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "요청에 실패했습니다.");
+      setMessage(err instanceof Error ? err.message : "연결 요청에 실패했습니다.");
     }
   }
   async function unlink() {
-    if (!pair || !window.confirm("연결된 파트너를 해제할까요? 이후 Share 공유가 중단됩니다.")) return;
+    if (!pair || !window.confirm("연결된 ID를 해제할까요? 이후 Share 공유가 중단됩니다.")) return;
     setMessage("");
     try {
       await disconnectPair(pair.id);
-      setMessage("파트너 연결을 해제했습니다.");
+      setMessage("ID 연결을 해제했습니다.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "연결 해제에 실패했습니다.");
     }
   }
   return (
     <section className="pair-panel">
-      <span style={sectionLabel()}>ID로 연결</span>
-      {pair && <p className="tiny-note pair-status" style={{ color }}>연결됨 · Share로만 공유돼요</p>}
-      {pair && <button className="unlink-btn" onClick={unlink}>연결된 파트너 해제</button>}
+      <span style={sectionLabel()}>ID 연결하기</span>
+      {pair && <p className="tiny-note pair-status" style={{ color }}>연결되었습니다! · Share로 나의 하루를 공유할 수 있습니다. </p>}
+      {pair && <button className="unlink-btn" onClick={unlink}>연결된 ID 해제</button>}
       <div className="tiny-form"><input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="상대 ID" /><button onClick={send}><Link2 size={14} /></button></div>
       {message && <p className="tiny-note">{message}</p>}
       {requests.map((req) => <div className="request" key={req.id}><span>@{req.fromNickname}</span><button onClick={() => acceptPairRequest(req.id)}>✓</button><button onClick={() => rejectPairRequest(req.id)}>×</button></div>)}
@@ -968,7 +968,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
   }
 
   async function archiveAll() {
-    if (!visible.length || !window.confirm("오늘 목록을 전부 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    if (!visible.length || !window.confirm("지금까지 작성한 목록을 전부 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
     setTodos((prev) => prev.map((todo) => todo.status === "archived" ? todo : { ...todo, status: "archived" }));
     resetAppliedActions();
     await Promise.all(visible.map((todo) => archiveTodo(scope, todo)));
@@ -979,9 +979,9 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       const payload = { todos: visible, note, color, labels, authorName: profile.displayName, authorNickname: profile.nickname, messages, updatedAt: null };
       await saveSharedDay(uid, dateKey, payload);
       if (pair) await savePairSharedDay(pair.id, uid, dateKey, payload);
-      alert("오늘의 공유 카드가 업데이트되었습니다.");
+      alert("공유가 완료되었습니다. SHARED 탭에서 확인해보세요!");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "공유 저장에 실패했습니다.");
+      alert(err instanceof Error ? err.message : "공유에 실패했습니다.");
     }
   }
 
@@ -1012,7 +1012,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       {visible.length > 0 && (
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".25rem" }}>
-            <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "var(--muted)" }}>오늘의 완료율</span>
+            <span style={{ fontSize: ".58rem", letterSpacing: ".1em", color: "var(--muted)" }}>Achievement</span>
             <span ref={pctRef} style={{ fontSize: ".62rem", fontWeight: "bold", color }}>{pct}%</span>
           </div>
           <div style={{ height: "2.5px", background: "var(--soft-bg)", borderRadius: "9999px", overflow: "hidden" }}>
@@ -1029,7 +1029,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
           setNote(value);
           void saveTextDoc(["users", uid, "notes", dateKey], "text", value);
         }}
-        placeholder="오늘의 한마디"
+        placeholder="오늘의 한마디를 입력하는 공간입니다. "
         rows={3}
       />
       <div className="todo-input-grid">
@@ -1085,14 +1085,14 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
                 void sendTimestamp();
               }
             }}
-            placeholder="남기고 싶은 순간"
+            placeholder="한 줄 타임스탬프를 입력하는 공간입니다. "
             rows={2}
           />
           <button onClick={sendTimestamp}>stamp</button>
         </div>
       </div>
       <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid var(--soft-line)" }}>
-        <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
+        <button onClick={printDaylog} style={pill(color, "#fff")}>print</button>
         <button style={pill("var(--soft-bg)", "var(--muted)")} onClick={() => setRoutineOpen(true)}>루틴</button>
         <div style={{ flex: 1 }} />
         {editMode && visible.length > 0 && <button style={pill("#fee2e2", "#ef4444")} onClick={archiveAll}>전체 삭제</button>}
@@ -1101,7 +1101,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
           {editMode ? "Done" : "Edit"}
         </button>
       </div>
-      {routineOpen && <RoutineModal uid={uid} labels={labels} routines={routines} onClose={() => setRoutineOpen(false)} />}
+      {routineOpen && <RoutineModal uid={uid} labels={labels} routines={routines} color={color} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
       {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible} labels={labels} color={color} texture={texture} />}
     </section>
@@ -1171,7 +1171,7 @@ function TodoRow({
       onChange={(event) => { setMemo(event.target.value); void saveMemo(event.target.value); }}
       onBlur={() => { if (!memo) setMemoOpen(false); }}
       onKeyDown={(event) => { if (event.key === "Escape" || (event.key === "Enter" && !event.shiftKey && !isCoarsePointer())) { event.preventDefault(); setMemoOpen(false); } }}
-      placeholder="메모를 입력하세요..."
+      placeholder="메모를 입력하는 공간입니다. "
       rows={2}
       style={{ display: "block", width: "100%", marginTop: ".2rem", paddingLeft: "1.5rem", border: "none", borderBottom: `1px solid ${color}44`, background: "transparent", resize: "none", fontFamily: "inherit", fontSize: ".78rem", lineHeight: 1.6, color: "#666", outline: "none" }}
     />
@@ -1216,7 +1216,7 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
       </div>
       <div className="print-total"><span>TOTAL    DONE</span><b style={{ color }}>{done} / {todos.length}</b></div>
       <div className="print-stamp">{stamp}</div>
-      <div className="print-credit">TODOLIST BY ⓒnagi</div>
+      <div className="print-credit">TODOLIST BY ⓒ nagi</div>
     </div>
     <div className="print-card-texture" style={{ backgroundImage: `url("${texture}")` }} />
   </div>;
@@ -1387,10 +1387,10 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
       <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "var(--text)" }}>{dateLabel}</h2>
-      <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
+      <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print</button>
     </div>
     <span style={label}>ᴍᴏʀɴɪɴɢ</span>
-    <EditableBlock value={journal.morning ?? ""} onChange={(value) => updateJournal({ morning: value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요." />
+    <EditableBlock value={journal.morning ?? ""} onChange={(value) => updateJournal({ morning: value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 입력하는 공간입니다. " />
     <div style={divider} />
     <span style={label}>ɢʀᴀᴛɪᴛᴜᴅᴇ</span>
     {[0, 1, 2].map((index) => (
@@ -1405,13 +1405,13 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
     ))}
     <div style={divider} />
     <span style={label}>ᴅɪᴀʀʏ</span>
-    <EditableBlock value={daily.diary ?? ""} onChange={(value) => updateDaily({ diary: value })} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 적어주세요." rows={6} />
+    <EditableBlock value={daily.diary ?? ""} onChange={(value) => updateDaily({ diary: value })} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 입력하는 공간입니다. " rows={6} />
     <div style={divider} />
     <span style={label}>ᴍᴏᴏᴅ</span>
     <MoodPicker value={daily.mood || []} onChange={(mood) => updateDaily({ mood })} color={color} />
     <div style={divider} />
     <span style={label}>ᴅʀᴇᴀᴍ</span>
-    <EditableBlock value={daily.dream ?? ""} onChange={(value) => updateDaily({ dream: value })} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.'" rows={4} textareaStyle={{ fontStyle: "italic" }} />
+    <EditableBlock value={daily.dream ?? ""} onChange={(value) => updateDaily({ dream: value })} placeholder="이루고 싶은 미래를 현재형으로 적는 공간입니다. '나는 이미 ___이다.'" rows={4} textareaStyle={{ fontStyle: "italic" }} />
     {printing && <NightlogCard dateLabel={dateLabel} journal={journal} daily={daily} color={color} texture={texture} />}
   </section>;
 }
@@ -1444,7 +1444,7 @@ function NightlogCard({ dateLabel, journal, daily, color, texture }: { dateLabel
       {!entries && <div className="print-empty">─ no entries today ─</div>}
       <div className="print-total night"><span>TOTAL    ENTRIES</span><b style={{ color }}>{entries} / 5</b></div>
       <div className="print-stamp">{stamp}</div>
-      <div className="print-credit">JOURNAL BY ⓒnagi</div>
+      <div className="print-credit">JOURNAL BY ⓒ nagi</div>
     </div>
   </div>;
 }
@@ -1527,8 +1527,8 @@ function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKe
     return (
       <section style={{ ...CARD, textAlign: "center", padding: "3rem 1.5rem", color: "#bbb" }}>
         <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.45 }}>♡</div>
-        <h2 style={{ fontSize: "1.05rem", color: "var(--muted)", marginBottom: ".5rem" }}>파트너가 연결되지 않았어요.</h2>
-        <p style={{ fontSize: ".78rem", lineHeight: 1.8 }}>왼쪽 프로필 편집창에서 상대 ID로 연결 요청을 보낼 수 있어요.<br />혼자 사용은 계속 가능합니다.</p>
+        <h2 style={{ fontSize: "1.05rem", color: "var(--muted)", marginBottom: ".5rem" }}>연결되지 않았습니다.</h2>
+        <p style={{ fontSize: ".78rem", lineHeight: 1.8 }}>편집 &gt; 상대 ID 입력을 통해 연결 요청을 보낼 수 있습니다. <br />연결하지 않고 사용하는 것도 가능합니다. </p>
       </section>
     );
   }
@@ -1564,7 +1564,7 @@ function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKe
               <b style={{ color: message.color }}>{message.owner}</b>
               <p>{message.text}</p>
             </div>
-          )) : <div className="shared-empty-line">아직 공유된 timestamp가 없어요.</div>}
+          )) : <div className="shared-empty-line">아직 공유된 타임스탬프가 없습니다. </div>}
         </div>
       </section>
 
@@ -1591,9 +1591,9 @@ function UserSharedCard({ user, todos, note, labels, notShared }: { user: { name
         {user.isSelf && <span style={{ background: `${user.color}18`, color: user.color }}>ME</span>}
       </div>
       {notShared ? (
-        <div className="shared-card-empty">아직 공유되지 않았어요.</div>
+        <div className="shared-card-empty">아직 공유되지 않았습니다. </div>
       ) : isEmpty ? (
-        <div className="shared-card-empty">오늘의 기록이 비어 있어요.</div>
+        <div className="shared-card-empty">오늘의 기록이 비어 있습니다. </div>
       ) : (
         <>
           {note.trim() && <p className="shared-note" style={{ color: user.color }}>{note}</p>}
@@ -1633,7 +1633,7 @@ function SharedProgress({ name, color, todos }: { name: string; color: string; t
   );
 }
 
-function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels: CategoryLabels; routines: Routine[]; onClose: () => void }) {
+function RoutineModal({ uid, labels, routines, color, onClose }: { uid: string; labels: CategoryLabels; routines: Routine[]; color: string; onClose: () => void }) {
   const [text, setText] = useState("");
   const [categoryKey, setCategoryKey] = useState<CategoryKey>("required");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
@@ -1647,11 +1647,11 @@ function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels:
     setWeekdays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day].sort());
   }
   return <div className="modal-backdrop" onClick={onClose}>
-    <section className="modal-card routine-modal" onClick={(e) => e.stopPropagation()}>
+    <section className="modal-card routine-modal" style={{ "--routine-color": color } as CSSProperties} onClick={(e) => e.stopPropagation()}>
       <div className="modal-head routine-head">
         <div>
           <b>루틴</b>
-          <p>반복할 일을 저장해두고 오늘 목록에 가볍게 불러와요.</p>
+          <p>반복된 일정을 등록하는 공간입니다. </p>
         </div>
         <button className="icon-btn" onClick={onClose}><X size={14} /></button>
       </div>
@@ -1671,10 +1671,10 @@ function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels:
           </label>
         </div>
         {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
-        <button className="dark-btn routine-add" onClick={add}>루틴 추가</button>
+        <button className="routine-add" onClick={add} style={{ background: color }}>루틴 추가</button>
       </div>
       <div className="routine-list">
-        {routines.length ? routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{labels[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>) : <div className="routine-empty">아직 저장된 루틴이 없어요.</div>}
+        {routines.length ? routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{labels[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>) : <div className="routine-empty">아직 저장된 루틴이 없습니다.</div>}
       </div>
     </section>
   </div>;
@@ -1714,7 +1714,7 @@ function MusicWidget({ userId, color, open, onToggle }: { userId: string; color:
     <div className="music-panel" style={{ left: open ? 0 : "-9999px" }}>
       <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
       {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="YouTube 영상 URL" /><button onClick={() => void add()} style={{ background: color }}>→</button></div>}
-      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b className="track-title" title={track.title}><em>{track.title}</em></b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
+      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b className="track-title" title={track.title}><em>{track.title}</em></b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요. </p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
       {currentEmbed && <iframe src={currentEmbed.url} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
     </div>
   </div>;
@@ -1855,7 +1855,7 @@ function DemianWidget() {
 
   useEffect(() => {
     if (!online) {
-      setMessage("지금은 집중 시간이 아닙니다.");
+      setMessage("휴식의 시간이야.");
       return;
     }
     let alive = true;

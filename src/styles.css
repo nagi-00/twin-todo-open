@@ -105,6 +105,14 @@ html[data-font="maruminya"] {
   font-size: 15px;
 }
 
+html[data-font="jeyeon"] {
+  font-size: 17px;
+}
+
+html[data-font="galmuri"] {
+  font-size: 14px;
+}
+
 button,
 input,
 textarea,
@@ -587,6 +595,10 @@ select {
   color: var(--muted-3);
 }
 
+.journal .editable-view span {
+  opacity: 0.55;
+}
+
 .todo-input-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -855,6 +867,11 @@ select {
   margin-top: 0.65rem;
   resize: vertical;
   line-height: 1.7;
+}
+
+.journal textarea::placeholder {
+  color: var(--muted-3);
+  opacity: 0.5;
 }
 
 .mood-row,
@@ -1184,7 +1201,16 @@ html[data-theme="dark"] .mood-row button {
 }
 
 .routine-add {
+  width: 100%;
   margin-top: 0.7rem;
+  border: none;
+  border-radius: 9999px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.52rem 0.72rem;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--routine-color, #2d2d2d) 22%, transparent);
 }
 
 .routine-list {
@@ -1242,7 +1268,7 @@ html[data-theme="dark"] .mood-row button {
 }
 
 .weekday-pills button.active {
-  background: var(--text);
+  background: var(--routine-color);
   color: #fff;
 }
 
