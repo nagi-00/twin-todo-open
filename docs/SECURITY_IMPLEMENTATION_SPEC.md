@@ -118,6 +118,7 @@ Other solo collections:
 `pairs/{pairId}`
 
 - `members`
+- `pairKey`
 - `memberMap`
 - `status`
 - `createdAt`

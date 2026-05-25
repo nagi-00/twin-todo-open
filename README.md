@@ -25,6 +25,8 @@ The goal is to preserve the existing TwinTodo UI, mood, and daily workflow while
 
 - `docs/SECURE_REBUILD_FROM_EXISTING_UI.md`
 - `docs/SECURITY_IMPLEMENTATION_SPEC.md`
+- `docs/FIREBASE_SETUP.md`
+- `docs/SECURITY_NOTES.md`
 - `firestore.rules`
 - `storage.rules`
 - `firebase.json`
