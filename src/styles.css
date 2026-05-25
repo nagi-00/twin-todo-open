@@ -1476,12 +1476,42 @@ select {
 }
 
 .track-list b {
+  position: relative;
+  display: block;
   font-size: 9px;
   color: #bbb;
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.track-title em {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
   text-overflow: ellipsis;
+  font-style: normal;
+  vertical-align: top;
+  will-change: transform;
+}
+
+.track-title:hover em {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 2rem;
+  animation: track-title-pan 7s ease-in-out infinite alternate;
+}
+
+@keyframes track-title-pan {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% + 13rem));
+  }
 }
 
 .track-list button {

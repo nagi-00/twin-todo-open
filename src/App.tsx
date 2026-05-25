@@ -941,7 +941,7 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
       </div>
       {routineOpen && <RoutineModal uid={uid} labels={labels} routines={routines} onClose={() => setRoutineOpen(false)} />}
       {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
-      {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible.filter((todo) => !todo.hidden)} labels={labels} color={color} texture={texture} />}
+      {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible} labels={labels} color={color} texture={texture} />}
     </section>
   );
 }
@@ -1025,7 +1025,7 @@ function CategorySettings({ scope, labels, onClose }: { scope: Scope; labels: Ca
     await saveCategories(scope, draft);
     onClose();
   }
-  return <div className="modal-backdrop" onClick={onClose}><section className="modal-card" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>카테고리명</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{CATEGORY_KEYS.map((key) => <label className="field" key={key}><span>{key}</span><input maxLength={12} value={draft[key]} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} /></label>)}<button className="dark-btn" onClick={save}>저장</button></section></div>;
+  return <div className="modal-backdrop"><section className="modal-card" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}><div className="modal-head"><b>카테고리명</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{CATEGORY_KEYS.map((key) => <label className="field" key={key}><span>{key}</span><input maxLength={12} value={draft[key]} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} /></label>)}<button className="dark-btn" onClick={save}>저장</button></section></div>;
 }
 
 function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLabel: string; note: string; todos: TodoItem[]; labels: CategoryLabels; color: string; texture: string }) {
@@ -1467,7 +1467,7 @@ function MusicWidget({ userId, color, open, onToggle }: { userId: string; color:
     <div className="music-panel" style={{ left: open ? 0 : "-9999px" }}>
       <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
       {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="YouTube 영상 URL" /><button onClick={() => void add()} style={{ background: color }}>→</button></div>}
-      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b>{track.title}</b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
+      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b className="track-title" title={track.title}><em>{track.title}</em></b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
       {currentEmbed && <iframe src={currentEmbed.url} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
     </div>
   </div>;
