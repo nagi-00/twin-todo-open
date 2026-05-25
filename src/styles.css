@@ -663,6 +663,10 @@ select {
   font-size: 19px;
 }
 
+.demian-widget > button.online {
+  background: #b8b8b8;
+}
+
 .widget-panel {
   position: absolute;
   width: 270px;
@@ -835,6 +839,71 @@ select {
   color: #777;
   font-size: 0.78rem;
   line-height: 1.6;
+}
+
+.demian-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.38rem;
+}
+
+.demian-row > button {
+  width: 1.4rem;
+  height: 0.85rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  background: #e8e8e8;
+  position: relative;
+}
+
+.demian-row > button.on {
+  background: #444;
+}
+
+.demian-row > button span {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: calc(0.85rem - 4px);
+  height: calc(0.85rem - 4px);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.demian-row > button.on span {
+  left: 6px;
+}
+
+.demian-row > span {
+  font-size: 10px;
+  color: #888;
+}
+
+.demian-row input {
+  width: 2.9rem;
+  padding: 0.2rem;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.demian-actions {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
+.demian-actions button {
+  border: none;
+  border-radius: 9999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.72rem;
 }
 
 .widget-panel textarea {

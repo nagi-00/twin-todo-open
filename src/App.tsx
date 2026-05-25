@@ -52,6 +52,7 @@ const ADMIN_EMAIL = "mx.gin.xo@gmail.com";
 const BULLETS = ["☐", "☑", "☒"] as const;
 const WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
+const DEF_SCHED: Record<number, { s: number; e: number }> = { 1: { s: 6, e: 13 }, 2: { s: 6, e: 18 }, 3: { s: 6, e: 13 }, 4: { s: 6, e: 18 }, 5: { s: 6, e: 21 } };
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
 const CATEGORY_ACCENT: Record<CategoryKey, string> = {
   required: "#8A4545",
@@ -91,6 +92,14 @@ function ytEmbed(raw: string) {
     return null;
   } catch {
     return null;
+  }
+}
+
+function loadSched() {
+  try {
+    return JSON.parse(localStorage.getItem("focusSched") || "null") || DEF_SCHED;
+  } catch {
+    return DEF_SCHED;
   }
 }
 
@@ -692,5 +701,75 @@ function PomodoroWidget({ color }: { color: string }) {
 
 function DemianWidget() {
   const [open, setOpen] = useState(false);
-  return <div className="demian-widget"><button onClick={() => setOpen((v) => !v)}>🖤</button>{open && <div className="widget-panel demian-panel"><button>⚙ 설정</button><b>ᴅᴇᴍɪᴀɴ</b><p>관리자 전용 위젯입니다. 집중 시간 설정과 메시지 기능은 기존 흐름을 유지해 확장할 예정입니다.</p></div>}</div>;
+  const [message, setMessage] = useState("");
+  const [configOpen, setConfigOpen] = useState(false);
+  const [sched, setSched] = useState<Record<number, { s: number; e: number }>>(loadSched);
+  const [edit, setEdit] = useState<Record<number, { s: number; e: number }>>(loadSched);
+  const online = (() => {
+    const now = new Date();
+    const row = sched[now.getDay()];
+    return Boolean(row && now.getHours() >= row.s && now.getHours() < row.e);
+  })();
+
+  useEffect(() => {
+    if (!online) {
+      setMessage("지금은 집중 시간이 아닙니다.");
+      return;
+    }
+    let alive = true;
+    fetch("https://raw.githubusercontent.com/nagi-00/nagi-todo/main/demian_focus_messages.json")
+      .then((res) => res.json())
+      .then((data: { messages?: string[] }) => {
+        if (!alive) return;
+        const list = data.messages || [];
+        setMessage(list[Math.floor(Math.random() * list.length)] || "오늘도 조용히 해내자.");
+      })
+      .catch(() => alive && setMessage("메시지를 불러오지 못했습니다."));
+    return () => {
+      alive = false;
+    };
+  }, [online]);
+
+  function save() {
+    setSched(edit);
+    localStorage.setItem("focusSched", JSON.stringify(edit));
+    setConfigOpen(false);
+  }
+
+  function update(day: number, field: "s" | "e", value: string) {
+    const next = Number.parseInt(value, 10);
+    if (Number.isNaN(next) || next < 0 || next > 23) return;
+    setEdit((prev) => ({ ...prev, [day]: { ...(prev[day] || { s: 0, e: 0 }), [field]: next } }));
+  }
+
+  function toggle(day: number) {
+    setEdit((prev) => {
+      const next = { ...prev };
+      if (next[day]) delete next[day];
+      else next[day] = DEF_SCHED[day] || { s: 6, e: 18 };
+      return next;
+    });
+  }
+
+  return <div className="demian-widget">
+    <button className={online ? "online" : ""} onClick={() => { setOpen((v) => !v); if (open) setConfigOpen(false); }}>🖤</button>
+    {open && <div className="widget-panel demian-panel">
+      <button onClick={() => { setEdit({ ...sched }); setConfigOpen((v) => !v); }}>⚙ 설정</button>
+      {configOpen ? <div>
+        <b>위젯 설정</b>
+        <p>요일별 집중 시간 (24시)</p>
+        {[1, 2, 3, 4, 5, 6, 0].map((day) => <div className="demian-row" key={day}>
+          <button className={edit[day] ? "on" : ""} onClick={() => toggle(day)}><span /></button>
+          <span>{WEEK_KO[day]}</span>
+          <input value={edit[day]?.s ?? 6} disabled={!edit[day]} onChange={(event) => update(day, "s", event.target.value)} />
+          <span>-</span>
+          <input value={edit[day]?.e ?? 18} disabled={!edit[day]} onChange={(event) => update(day, "e", event.target.value)} />
+        </div>)}
+        <div className="demian-actions"><button onClick={() => setConfigOpen(false)}>취소</button><button onClick={save}>저장</button></div>
+      </div> : <>
+        <b>ᴅᴇᴍɪᴀɴ</b>
+        <p>{message}</p>
+      </>}
+    </div>}
+  </div>;
 }
