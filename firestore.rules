@@ -94,6 +94,8 @@ service cloud.firestore {
           "nickname",
           "nicknameNormalized",
           "avatarPath",
+          "backgroundPath",
+          "backgroundOpacity",
           "role",
           "createdAt",
           "updatedAt"
@@ -111,8 +113,14 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).changedKeys().hasOnly([
           "displayName",
           "avatarPath",
+          "backgroundPath",
+          "backgroundOpacity",
           "updatedAt"
-        ]);
+        ])
+        && (!("backgroundOpacity" in request.resource.data)
+          || (request.resource.data.backgroundOpacity is number
+            && request.resource.data.backgroundOpacity >= 0
+            && request.resource.data.backgroundOpacity <= 0.7));
 
       allow delete: if false;
 

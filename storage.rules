@@ -26,6 +26,14 @@ service firebase.storage {
       allow delete: if isSelf(uid);
     }
 
+    match /profiles/{uid}/background/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid)
+        && request.resource.size <= 4 * 1024 * 1024
+        && isAllowedAvatarContentType();
+      allow delete: if isSelf(uid);
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

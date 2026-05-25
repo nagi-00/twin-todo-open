@@ -11,6 +11,8 @@ export type UserProfile = {
   nickname: string | null;
   nicknameNormalized: string | null;
   avatarPath: string | null;
+  backgroundPath?: string | null;
+  backgroundOpacity?: number;
   role: "user";
   createdAt?: unknown;
   updatedAt?: unknown;

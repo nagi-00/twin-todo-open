@@ -34,6 +34,8 @@ export async function ensureUserProfile(user: User) {
       nickname: null,
       nicknameNormalized: null,
       avatarPath: null,
+      backgroundPath: null,
+      backgroundOpacity: 0.18,
       role: "user",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -61,6 +63,21 @@ export async function uploadAvatar(uid: string, file: File) {
     updatedAt: serverTimestamp(),
   });
   return getDownloadURL(avatarRef);
+}
+
+export async function uploadBackground(uid: string, file: File, opacity: number) {
+  if (!storage || !db) throw new Error("Firebase Storage is not configured.");
+  const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `profiles/${uid}/background/background.${extension}`;
+  const backgroundRef = ref(storage, path);
+  const safeOpacity = Math.max(0, Math.min(0.7, opacity));
+  await uploadBytes(backgroundRef, file, { contentType: file.type });
+  await updateDoc(doc(db, "users", uid), {
+    backgroundPath: path,
+    backgroundOpacity: safeOpacity,
+    updatedAt: serverTimestamp(),
+  });
+  return getDownloadURL(backgroundRef);
 }
 
 export async function getAvatarUrl(path: string | null) {

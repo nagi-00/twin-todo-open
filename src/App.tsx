@@ -22,7 +22,7 @@ import { saveCategories, subscribeCategories } from "./services/categories";
 import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, getPairPartnerInfo, rejectPairRequest } from "./services/functions";
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
 import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
-import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar } from "./services/profile";
+import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar, uploadBackground } from "./services/profile";
 import { addTodo, archiveTodo, getTodosForDate, reorderTodos, subscribeTodos, updateTodoPatch, updateTodoTitle } from "./services/todos";
 import {
   addRoutine,
@@ -394,6 +394,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("twintodoTheme") === "dark");
   const [profileEditing, setProfileEditing] = useState(false);
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
@@ -425,12 +426,18 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
     localStorage.setItem("twintodoTheme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  useEffect(() => {
+    getAvatarUrl(profile.backgroundPath || null).then(setBackgroundUrl).catch(() => setBackgroundUrl(null));
+  }, [profile.backgroundPath]);
+
   const dateKey = toDateKey(selectedDate);
   const color = dateColors[dateKey] || "#2d2d2d";
   const scope: Scope = useMemo(() => ({ type: "solo", uid: user.uid }), [user.uid]);
+  const backgroundOpacity = Math.max(0, Math.min(0.7, profile.backgroundOpacity ?? 0.18));
 
   return (
     <div className="app" style={{ display: "flex", minHeight: "100vh" }}>
+      {backgroundUrl && <div className="app-bg-image" style={{ backgroundImage: `url("${backgroundUrl}")`, opacity: backgroundOpacity }} />}
       <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
       <div className={sidebarOpen ? "sidebar-overlay open" : "sidebar-overlay"} onClick={() => setSidebarOpen(false)} />
       <aside className={sidebarOpen ? "sidebar open" : "sidebar"}>
@@ -443,6 +450,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             onFontChange={setFontKey}
             darkMode={darkMode}
             onDarkMode={setDarkMode}
+            onBackgroundSaved={(url) => setBackgroundUrl(url)}
             onEditingChange={setProfileEditing}
             requests={requests}
             pair={pair}
@@ -491,6 +499,7 @@ function ProfilePanel({
   onFontChange,
   darkMode,
   onDarkMode,
+  onBackgroundSaved,
   onEditingChange,
   requests,
   pair,
@@ -502,6 +511,7 @@ function ProfilePanel({
   onFontChange: (key: FontKey) => void;
   darkMode: boolean;
   onDarkMode: (value: boolean) => void;
+  onBackgroundSaved: (url: string) => void;
   onEditingChange: (value: boolean) => void;
   requests: PairRequest[];
   pair: Pair | null;
@@ -511,6 +521,7 @@ function ProfilePanel({
   const [draftFontKey, setDraftFontKey] = useState<FontKey>(fontKey);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
 
   useEffect(() => {
     getAvatarUrl(profile.avatarPath).then(setAvatarUrl).catch(() => setAvatarUrl(null));
@@ -560,11 +571,13 @@ function ProfilePanel({
           <div className="profile-settings">
             <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
             <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
+            <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
             <PairPanel requests={requests} pair={pair} color={color} />
           </div>
         )}
       </div>
       {editorOpen && <AvatarEditor uid={user.uid} onSaved={(url) => setAvatarUrl(url)} onClose={() => setEditorOpen(false)} />}
+      {backgroundEditorOpen && <BackgroundEditor uid={user.uid} initialOpacity={profile.backgroundOpacity ?? 0.18} onSaved={onBackgroundSaved} onClose={() => setBackgroundEditorOpen(false)} />}
     </section>
   );
 }
@@ -679,6 +692,130 @@ function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: s
             <div className="button-row">
               <button className={flipX ? "soft-btn active" : "soft-btn"} onClick={() => setFlipX((v) => !v)}>좌우반전</button>
               <button className={flipY ? "soft-btn active" : "soft-btn"} onClick={() => setFlipY((v) => !v)}>상하반전</button>
+              <button className="soft-btn" onClick={resetEdits}>reset</button>
+            </div>
+            <button className="dark-btn avatar-save" onClick={save} disabled={!src}>save</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BackgroundPanel({ color, onOpen }: { color: string; onOpen: () => void }) {
+  return (
+    <section className="background-panel">
+      <span style={sectionLabel()}>background</span>
+      <button type="button" className="background-open" style={{ "--theme-color": color } as CSSProperties} onClick={onOpen}>
+        배경 이미지 편집
+      </button>
+    </section>
+  );
+}
+
+function BackgroundEditor({ uid, initialOpacity, onSaved, onClose }: { uid: string; initialOpacity: number; onSaved: (url: string) => void; onClose: () => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [angle, setAngle] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);
+  const [opacity, setOpacity] = useState(Math.max(0, Math.min(0.7, initialOpacity)));
+  const [flipX, setFlipX] = useState(false);
+  const [flipY, setFlipY] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dragRef = useRef<{ x: number; y: number; baseX: number; baseY: number } | null>(null);
+
+  useEffect(() => {
+    if (!src || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const image = new window.Image();
+    image.onload = () => {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2 + x, canvas.height / 2 + y);
+      ctx.rotate((angle * Math.PI) / 180);
+      ctx.scale((flipX ? -1 : 1) * scale, (flipY ? -1 : 1) * scale);
+      const fit = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const drawW = image.width * fit;
+      const drawH = image.height * fit;
+      ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    };
+    image.src = src;
+  }, [src, angle, scale, x, y, flipX, flipY]);
+
+  function selectFile(file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setSrc(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+
+  function resetEdits() {
+    setAngle(0);
+    setScale(1);
+    setX(0);
+    setY(0);
+    setOpacity(0.18);
+    setFlipX(false);
+    setFlipY(false);
+  }
+
+  function startDrag(event: PointerEvent<HTMLCanvasElement>) {
+    if (!src) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { x: event.clientX, y: event.clientY, baseX: x, baseY: y };
+  }
+
+  function moveDrag(event: PointerEvent<HTMLCanvasElement>) {
+    if (!dragRef.current) return;
+    setX(Math.max(-360, Math.min(360, dragRef.current.baseX + event.clientX - dragRef.current.x)));
+    setY(Math.max(-240, Math.min(240, dragRef.current.baseY + event.clientY - dragRef.current.y)));
+  }
+
+  async function save() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.9));
+    if (!blob) return;
+    const url = await uploadBackground(uid, new File([blob], "background.webp", { type: "image/webp" }), opacity);
+    onSaved(`${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`);
+    onClose();
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section className="avatar-editor background-editor modal-card" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-head"><b>배경 이미지 편집</b><button className="icon-btn" onClick={onClose}><X size={15} /></button></div>
+        <div className="avatar-editor-layout background-editor-layout">
+          <div>
+            <canvas
+              ref={canvasRef}
+              width={960}
+              height={540}
+              className="avatar-canvas background-canvas"
+              style={{ opacity }}
+              onPointerDown={startDrag}
+              onPointerMove={moveDrag}
+              onPointerUp={() => { dragRef.current = null; }}
+              onPointerCancel={() => { dragRef.current = null; }}
+            />
+            <div className="avatar-hint">{src ? "이미지를 드래그해서 배경 위치를 조정할 수 있습니다." : "이미지를 선택하면 배경 미리보기가 표시됩니다."}</div>
+            <label className="upload-drop"><Upload size={16} />{src ? "다른 이미지 선택" : "배경 이미지 선택"}<input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>
+          </div>
+          <div className="avatar-controls">
+            <div className="editor-grid">
+              <label><span>투명도 {Math.round(opacity * 100)}%</span><input type="range" min="0" max="0.7" step="0.01" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>
+              <label><span>회전 {angle}°</span><input type="range" min="-180" max="180" value={angle} onChange={(event) => setAngle(Number(event.target.value))} /></label>
+              <label><span>확대 {Math.round(scale * 100)}%</span><input type="range" min="0.7" max="2.6" step="0.05" value={scale} onChange={(event) => setScale(Number(event.target.value))} /></label>
+              <label><span>좌우 {x}</span><input type="range" min="-360" max="360" value={x} onChange={(event) => setX(Number(event.target.value))} /></label>
+              <label><span>상하 {y}</span><input type="range" min="-240" max="240" value={y} onChange={(event) => setY(Number(event.target.value))} /></label>
+            </div>
+            <div className="button-row">
+              <button className={flipX ? "soft-btn active" : "soft-btn"} onClick={() => setFlipX((value) => !value)}>좌우반전</button>
+              <button className={flipY ? "soft-btn active" : "soft-btn"} onClick={() => setFlipY((value) => !value)}>상하반전</button>
               <button className="soft-btn" onClick={resetEdits}>reset</button>
             </div>
             <button className="dark-btn avatar-save" onClick={save} disabled={!src}>save</button>

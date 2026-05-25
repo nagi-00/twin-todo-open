@@ -101,6 +101,33 @@ body {
   min-height: 100vh;
 }
 
+.app {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-bg-image {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.hamburger,
+.sidebar,
+.sidebar-overlay,
+.main,
+.weather-widget,
+.music-widget,
+.pomo-widget,
+.demian-widget {
+  position: relative;
+  z-index: 1;
+}
+
 html[data-font="maruminya"] {
   font-size: 15px;
 }
@@ -347,10 +374,27 @@ select {
   border-top: 1px solid var(--line);
 }
 
+.profile-settings .background-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
 .profile-settings .pair-panel {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top-color: var(--line);
+}
+
+.background-open {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--theme-color) 22%, var(--line));
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--theme-color) 10%, var(--field-bg));
+  color: color-mix(in srgb, var(--theme-color) 62%, var(--text-soft));
+  font-family: inherit;
+  font-size: 0.72rem;
+  padding: 0.42rem 0.7rem;
 }
 
 .font-panel > div {
@@ -601,18 +645,23 @@ select {
 
 .todo-input-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-bottom: 1.1rem;
+  min-width: 0;
 }
 
 .todo-input-card {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .todo-input-card textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   padding: 0.4rem 0.5rem;
   border-radius: 0.4rem;
@@ -622,6 +671,12 @@ select {
   line-height: 1.55;
   color: var(--text-soft);
   background: var(--field-bg);
+}
+
+html[data-font="galmuri"] .todo-input-card textarea,
+html[data-font="galmuri"] .timestamp-input textarea,
+html[data-font="galmuri"] .journal textarea {
+  font-size: 0.72rem;
 }
 
 .todo-input-card button,
@@ -1377,11 +1432,19 @@ html[data-theme="dark"] .mood-row button {
   text-align: left;
 }
 
+.background-editor {
+  width: min(780px, 100%);
+}
+
 .avatar-editor-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 1rem;
   align-items: start;
+}
+
+.background-editor-layout {
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
 }
 
 .avatar-canvas {
@@ -1398,6 +1461,13 @@ html[data-theme="dark"] .mood-row button {
 
 .avatar-canvas.circle {
   border-radius: 50%;
+}
+
+.background-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
 }
 
 .avatar-hint {
