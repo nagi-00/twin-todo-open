@@ -381,6 +381,12 @@ select {
   border-top: 1px solid var(--soft-line);
 }
 
+.font-size-panel {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--soft-line);
+}
+
 .theme-panel {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
@@ -391,6 +397,12 @@ select {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
+}
+
+.profile-settings .font-size-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
 }
 
 .profile-settings .theme-panel {
@@ -475,6 +487,17 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+}
+
+.font-size-panel > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.font-size-panel button {
+  justify-content: center;
+  font-family: var(--ui-font);
 }
 
 .admin-font-fixed {

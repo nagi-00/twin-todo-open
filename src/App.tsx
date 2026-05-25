@@ -76,6 +76,22 @@ const FONT_OPTIONS = [
   { key: "galmuri", label: "갈무리", family: "Galmuri" },
 ] as const;
 type FontKey = typeof FONT_OPTIONS[number]["key"];
+const FONT_BASE_SIZES: Record<FontKey | "hjss", number> = {
+  leeseyoon: 16,
+  concon: 16,
+  maruminya: 15,
+  pretendard: 16,
+  sejonghakdang: 16,
+  jeyeon: 17,
+  galmuri: 14,
+  hjss: 16,
+};
+const FONT_SCALE_OPTIONS = [
+  { key: "0.8", label: "x0.8", value: 0.8 },
+  { key: "1.0", label: "x1.0", value: 1 },
+  { key: "1.2", label: "x1.2", value: 1.2 },
+] as const;
+type FontScaleKey = typeof FONT_SCALE_OPTIONS[number]["key"];
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
 const CATEGORY_TONE: Record<CategoryKey, { hue: number; light: number }> = {
   required: { hue: -10, light: 0.12 },
@@ -191,6 +207,15 @@ function isCoarsePointer() {
 
 function isComposing(event: KeyboardEvent<HTMLTextAreaElement> | KeyboardEvent<HTMLInputElement>) {
   return Boolean((event.nativeEvent as { isComposing?: boolean }).isComposing);
+}
+
+function readFontScale() {
+  const saved = localStorage.getItem("twintodoFontScale");
+  return FONT_SCALE_OPTIONS.some((option) => option.key === saved) ? (saved as FontScaleKey) : "1.0";
+}
+
+function fontScaleValue(key: FontScaleKey) {
+  return FONT_SCALE_OPTIONS.find((option) => option.key === key)?.value ?? 1;
 }
 
 function pill(bg = "var(--soft-bg)", fg = "var(--text-soft)", sm = false) {
@@ -395,6 +420,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeWidget, setActiveWidget] = useState<null | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
+  const [fontScaleKey, setFontScaleKey] = useState<FontScaleKey>(() => readFontScale());
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("twintodoTheme") === "dark");
   const [profileEditing, setProfileEditing] = useState(false);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
@@ -426,13 +452,17 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
     if (isAdmin) {
       document.documentElement.style.setProperty("--app-font", `"HJSS", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
       document.documentElement.dataset.font = "hjss";
+      document.documentElement.style.fontSize = `${FONT_BASE_SIZES.hjss * fontScaleValue(fontScaleKey)}px`;
+      localStorage.setItem("twintodoFontScale", fontScaleKey);
       return;
     }
     const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
     document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
     document.documentElement.dataset.font = found.key;
+    document.documentElement.style.fontSize = `${FONT_BASE_SIZES[found.key] * fontScaleValue(fontScaleKey)}px`;
     localStorage.setItem("twintodoFont", found.key);
-  }, [fontKey, isAdmin]);
+    localStorage.setItem("twintodoFontScale", fontScaleKey);
+  }, [fontKey, fontScaleKey, isAdmin]);
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
     localStorage.setItem("twintodoTheme", darkMode ? "dark" : "light");
@@ -461,7 +491,9 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             color={color}
             defaultThemeColor={defaultThemeColor}
             fontKey={fontKey}
+            fontScaleKey={fontScaleKey}
             onFontChange={setFontKey}
+            onFontScaleChange={setFontScaleKey}
             isAdmin={isAdmin}
             darkMode={darkMode}
             onDarkMode={setDarkMode}
@@ -512,7 +544,9 @@ function ProfilePanel({
   color,
   defaultThemeColor,
   fontKey,
+  fontScaleKey,
   onFontChange,
+  onFontScaleChange,
   isAdmin,
   darkMode,
   onDarkMode,
@@ -526,7 +560,9 @@ function ProfilePanel({
   color: string;
   defaultThemeColor: string;
   fontKey: FontKey;
+  fontScaleKey: FontScaleKey;
   onFontChange: (key: FontKey) => void;
+  onFontScaleChange: (key: FontScaleKey) => void;
   isAdmin: boolean;
   darkMode: boolean;
   onDarkMode: (value: boolean) => void;
@@ -538,6 +574,7 @@ function ProfilePanel({
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
   const [draftFontKey, setDraftFontKey] = useState<FontKey>(fontKey);
+  const [draftFontScaleKey, setDraftFontScaleKey] = useState<FontScaleKey>(fontScaleKey);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
@@ -550,6 +587,9 @@ function ProfilePanel({
     if (editing) setDraftFontKey(fontKey);
   }, [editing, fontKey]);
   useEffect(() => {
+    if (editing) setDraftFontScaleKey(fontScaleKey);
+  }, [editing, fontScaleKey]);
+  useEffect(() => {
     onEditingChange(editing);
     return () => onEditingChange(false);
   }, [editing, onEditingChange]);
@@ -558,6 +598,7 @@ function ProfilePanel({
     if (!name.trim()) return;
     await updateDisplayName(user.uid, name.trim());
     onFontChange(draftFontKey);
+    onFontScaleChange(draftFontScaleKey);
     setEditing(false);
   }
 
@@ -591,6 +632,7 @@ function ProfilePanel({
             <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
             <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} />
             {isAdmin ? <AdminFontPanel color={color} /> : <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />}
+            <FontScalePanel fontScaleKey={draftFontScaleKey} onChange={setDraftFontScaleKey} color={color} />
             <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
             <PairPanel requests={requests} pair={pair} color={color} />
           </div>
@@ -905,6 +947,23 @@ function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (
     <div>
       {FONT_OPTIONS.map((font) => (
         <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "var(--soft-bg)", fontKey === font.key ? "#fff" : "var(--muted)", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
+      ))}
+    </div>
+  </section>;
+}
+
+function FontScalePanel({ fontScaleKey, onChange, color }: { fontScaleKey: FontScaleKey; onChange: (key: FontScaleKey) => void; color: string }) {
+  return <section className="font-size-panel">
+    <span style={sectionLabel()}>size</span>
+    <div>
+      {FONT_SCALE_OPTIONS.map((scale) => (
+        <button
+          key={scale.key}
+          onClick={() => onChange(scale.key)}
+          style={pill(fontScaleKey === scale.key ? color : "var(--soft-bg)", fontScaleKey === scale.key ? "#fff" : "var(--muted)", true)}
+        >
+          {scale.label}
+        </button>
       ))}
     </div>
   </section>;
