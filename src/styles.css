@@ -1135,6 +1135,11 @@ select {
   color: #999;
 }
 
+.pomo-settings label span {
+  width: 2.7rem;
+  flex-shrink: 0;
+}
+
 .pomo-settings input {
   width: 3rem;
   padding: 0.18rem 0.4rem;
