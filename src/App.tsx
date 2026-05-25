@@ -1271,7 +1271,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
         </button>
       </div>
       {routineOpen && <RoutineModal uid={uid} labels={labels} routines={routines} color={color} onClose={() => setRoutineOpen(false)} />}
-      {catOpen && <CategorySettings scope={scope} labels={labels} onClose={() => setCatOpen(false)} />}
+      {catOpen && <CategorySettings scope={scope} labels={labels} color={color} onClose={() => setCatOpen(false)} />}
       {printing && <DaylogCard dateLabel={dateLabel} note={note} todos={visible} labels={labels} color={color} texture={texture} />}
     </section>
   );
@@ -1350,13 +1350,13 @@ function TodoRow({
   </div>;
 }
 
-function CategorySettings({ scope, labels, onClose }: { scope: Scope; labels: CategoryLabels; onClose: () => void }) {
+function CategorySettings({ scope, labels, color, onClose }: { scope: Scope; labels: CategoryLabels; color: string; onClose: () => void }) {
   const [draft, setDraft] = useState(labels);
   async function save() {
     await saveCategories(scope, draft);
     onClose();
   }
-  return <div className="modal-backdrop"><section className="modal-card" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}><div className="modal-head"><b>카테고리명</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{CATEGORY_KEYS.map((key) => <label className="field" key={key}><span>{key}</span><input maxLength={12} value={draft[key]} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} /></label>)}<button className="dark-btn" onClick={save}>저장</button></section></div>;
+  return <div className="modal-backdrop"><section className="modal-card" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}><div className="modal-head"><b>카테고리명</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{CATEGORY_KEYS.map((key) => <label className="field" key={key}><span>{key}</span><input maxLength={12} value={draft[key]} onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))} /></label>)}<button className="category-save-btn" style={{ background: color }} onClick={save}>저장</button></section></div>;
 }
 
 function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLabel: string; note: string; todos: TodoItem[]; labels: CategoryLabels; color: string; texture: string }) {

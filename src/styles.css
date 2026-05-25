@@ -1352,6 +1352,18 @@ html[data-theme="dark"] .mood-row button {
   box-shadow: 0 6px 14px color-mix(in srgb, var(--routine-color, #2d2d2d) 22%, transparent);
 }
 
+.category-save-btn {
+  width: 100%;
+  border: none;
+  border-radius: 9999px;
+  color: #fff;
+  font-family: var(--ui-font);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.52rem 0.72rem;
+  margin-top: 0.45rem;
+}
+
 .routine-list {
   max-height: 14rem;
   overflow-y: auto;
