@@ -10,7 +10,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import type { CategoryKey, Routine } from "../types";
+import type { CategoryKey, CategoryLabels, Routine } from "../types";
 
 export type DateColorMap = Record<string, string>;
 export type NoteMap = Record<string, string>;
@@ -28,6 +28,7 @@ export type SharedDay = {
   todos: unknown[];
   note: string;
   color: string;
+  labels?: CategoryLabels;
   messages: Message[];
   updatedAt?: unknown;
 };

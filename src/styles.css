@@ -442,8 +442,12 @@ select {
 
 .note-view {
   margin-bottom: 1rem;
-  background: #fafafa;
-  border-color: #f2f2f2;
+  min-height: auto;
+  padding: 0.12rem 0 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 650;
 }
 
 .editable-view span,
@@ -660,12 +664,212 @@ select {
 }
 
 .week-mini,
-.shared-card,
 .message-box,
 .routine-row {
   border-radius: 14px;
   background: #fafafa;
   padding: 0.75rem;
+}
+
+.shared-date {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 1.35rem;
+}
+
+.shared-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.4rem;
+}
+
+.user-shared-card {
+  min-height: 11.5rem;
+  border: 1.5px solid #eee;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.user-shared-card.muted {
+  background: #f8f8f8;
+}
+
+.user-shared-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.user-shared-head h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.user-shared-head span {
+  border-radius: 9999px;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.shared-card-empty {
+  min-height: 7rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #bbb;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.shared-note {
+  margin-bottom: 0.8rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.shared-category {
+  padding-top: 0.65rem;
+  border-top: 1px solid #f2f2f2;
+  margin-top: 0.65rem;
+}
+
+.shared-category > span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.shared-todo {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.32rem;
+  align-items: baseline;
+  color: #555;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  margin-bottom: 0.24rem;
+}
+
+.shared-todo p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.shared-todo small {
+  grid-column: 2 / -1;
+  color: #aaa;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.shared-section {
+  border-top: 1px solid #f2f2f2;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.shared-section h3 {
+  color: #bbb;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.65rem;
+}
+
+.shared-timeline {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shared-timeline-row {
+  display: grid;
+  grid-template-columns: 3.1rem 4.5rem 1fr;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.shared-timeline-row span {
+  color: #bbb;
+  font-size: 0.65rem;
+}
+
+.shared-timeline-row b {
+  font-size: 0.72rem;
+}
+
+.shared-timeline-row p {
+  color: #555;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.shared-empty-line {
+  color: #c8c8c8;
+  font-size: 0.75rem;
+}
+
+.shared-progress-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.shared-progress-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 2.4rem;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.72rem;
+  color: #999;
+}
+
+.shared-progress-row > div {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #f0f0f0;
+}
+
+.shared-progress-row i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.35s ease;
+}
+
+.shared-progress-row b {
+  text-align: right;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .shared-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .shared-timeline-row {
+    grid-template-columns: 2.7rem 3.8rem 1fr;
+    gap: 0.35rem;
+  }
+
+  .shared-progress-row {
+    grid-template-columns: 3.8rem 1fr 2.1rem;
+  }
 }
 
 .routine-modal {

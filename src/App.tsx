@@ -34,6 +34,7 @@ import {
   saveMessages,
   savePairSharedDay,
   saveSharedDay,
+  SharedDay,
   subscribeDaily,
   subscribeDateColors,
   subscribeNotes,
@@ -356,7 +357,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
         {tab === "todo" && <TodoView scope={scope} uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "journal" && <JournalView uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
-        {tab === "shared" && <SharedView uid={user.uid} dateKey={dateKey} color={color} pair={pair} />}
+        {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} dateKey={dateKey} color={color} pair={pair} />}
       </main>
       <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
       <MusicWidget userId={user.uid} color={color} open={activeWidget === "music"} onToggle={() => setActiveWidget((value) => value === "music" ? null : "music")} />
@@ -795,7 +796,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
 
   async function shareToday() {
     try {
-      const payload = { todos: visible.filter((todo) => !todo.hidden), note, color, messages, updatedAt: null };
+      const payload = { todos: visible.filter((todo) => !todo.hidden), note, color, labels, messages, updatedAt: null };
       await saveSharedDay(uid, dateKey, payload);
       if (scope.type === "pair") await savePairSharedDay(scope.pairId, uid, dateKey, payload);
       alert("오늘의 공유 카드가 업데이트되었습니다.");
@@ -838,6 +839,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
       <EditableBlock
         className="note-box"
         viewClassName="note-view"
+        viewStyle={{ color }}
         value={note}
         onChange={(value) => {
           setNote(value);
@@ -1052,6 +1054,7 @@ function EditableBlock({
   rows = 3,
   className,
   viewClassName,
+  viewStyle,
   textareaStyle,
 }: {
   value: string;
@@ -1060,6 +1063,7 @@ function EditableBlock({
   rows?: number;
   className?: string;
   viewClassName?: string;
+  viewStyle?: CSSProperties;
   textareaStyle?: CSSProperties;
 }) {
   const [editing, setEditing] = useState(!value.trim());
@@ -1071,7 +1075,7 @@ function EditableBlock({
   if (!editing) {
     return (
       <div className={viewClassName || "editable-view"} onDoubleClick={() => setEditing(true)}>
-        {value.trim() ? value : <span>{placeholder}</span>}
+        <div style={viewStyle}>{value.trim() ? value : <span>{placeholder}</span>}</div>
       </div>
     );
   }
@@ -1243,28 +1247,128 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
   </div>;
 }
 
-function SharedView({ uid, dateKey, color, pair }: { uid: string; dateKey: string; color: string; pair: Pair | null }) {
-  const [shared, setShared] = useState<ReturnType<typeof Object> | null>(null);
-  const [partnerShared, setPartnerShared] = useState<ReturnType<typeof Object> | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; displayName: string; dateKey: string; color: string; pair: Pair | null }) {
+  const [shared, setShared] = useState<SharedDay | null>(null);
+  const [partnerShared, setPartnerShared] = useState<SharedDay | null>(null);
   const partnerUid = pair?.members.find((member) => member !== uid) || null;
-  useEffect(() => pair ? subscribePairSharedDay(pair.id, uid, dateKey, (value) => setShared(value as never)) : subscribeSharedDay(uid, dateKey, (value) => setShared(value as never)), [pair, uid, dateKey]);
-  useEffect(() => pair && partnerUid ? subscribePairSharedDay(pair.id, partnerUid, dateKey, (value) => setPartnerShared(value as never)) : undefined, [pair, partnerUid, dateKey]);
-  useEffect(() => subscribeMessages(uid, dateKey, setMessages), [uid, dateKey]);
-  async function send() {
-    if (!input.trim()) return;
-    const next = [...messages, { text: input.trim(), time: Date.now() }];
-    setInput("");
-    await saveMessages(uid, dateKey, next);
+  useEffect(() => {
+    setPartnerShared(null);
+    return pair
+      ? subscribePairSharedDay(pair.id, uid, dateKey, (value) => setShared(value))
+      : subscribeSharedDay(uid, dateKey, (value) => setShared(value));
+  }, [pair, uid, dateKey]);
+  useEffect(() => {
+    if (!pair || !partnerUid) {
+      setPartnerShared(null);
+      return undefined;
+    }
+    return subscribePairSharedDay(pair.id, partnerUid, dateKey, (value) => setPartnerShared(value));
+  }, [pair, partnerUid, dateKey]);
+
+  if (!pair) {
+    return (
+      <section style={{ ...CARD, textAlign: "center", padding: "3rem 1.5rem", color: "#bbb" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.45 }}>♡</div>
+        <h2 style={{ fontSize: "1.05rem", color: "#999", marginBottom: ".5rem" }}>파트너가 연결되지 않았어요.</h2>
+        <p style={{ fontSize: ".78rem", lineHeight: 1.8 }}>왼쪽 프로필 편집창에서 상대 ID로 연결 요청을 보낼 수 있어요.<br />혼자 사용은 계속 가능합니다.</p>
+      </section>
+    );
   }
-  if (!pair) return <section className="main-card empty-twin"><h2>아직 연결된 Twin이 없어요.</h2><p>왼쪽 패널에서 상대 ID로 연결 요청을 보낼 수 있습니다. 혼자 사용은 계속 가능합니다.</p></section>;
-  return <section className="main-card">
-    <span className="micro-label">ᴛᴡɪɴ</span>
-    <div className="shared-card" style={{ borderColor: color }}><b>내 공유 카드</b><p>{shared ? "오늘 공유가 준비되었습니다." : "todo 탭에서 Share를 눌러주세요."}</p></div>
-    <div className="shared-card" style={{ borderColor: `${color}55` }}><b>파트너 공유 카드</b><p>{partnerShared ? "파트너의 오늘 공유가 도착했습니다." : "아직 파트너 공유가 없습니다."}</p></div>
-    <div className="message-box">{messages.map((m) => <p key={m.time}>{m.text}</p>)}<div className="tiny-form"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="timestamp" /><button onClick={send}>→</button></div></div>
-  </section>;
+
+  const myTodos = ((shared?.todos || []) as TodoItem[]).filter((todo) => !todo.hidden && todo.status !== "archived");
+  const partnerTodos = ((partnerShared?.todos || []) as TodoItem[]).filter((todo) => !todo.hidden && todo.status !== "archived");
+  const partnerColor = partnerShared?.color || "#888";
+  const myLabels = shared?.labels || DEFAULT_CATEGORIES;
+  const partnerLabels = partnerShared?.labels || DEFAULT_CATEGORIES;
+  const timeline = [
+    ...(shared?.messages || []).map((message) => ({ ...message, owner: displayName || "나", color })),
+    ...(partnerShared?.messages || []).map((message) => ({ ...message, owner: "Twin", color: partnerColor })),
+  ].sort((a, b) => a.time - b.time);
+  const dateLabel = new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  return (
+    <section style={CARD}>
+      <h2 className="shared-date">{dateLabel}</h2>
+      <div className="shared-grid">
+        <UserSharedCard user={{ name: displayName || "나", color, isSelf: true }} todos={myTodos} note={shared?.note || ""} labels={myLabels} notShared={!shared} />
+        <UserSharedCard user={{ name: "Twin", color: partnerColor }} todos={partnerTodos} note={partnerShared?.note || ""} labels={partnerLabels} notShared={!partnerShared} />
+      </div>
+
+      <section className="shared-section">
+        <h3>timestamp</h3>
+        <div className="shared-timeline">
+          {timeline.length ? timeline.map((message, index) => (
+            <div key={`${message.time}-${index}`} className="shared-timeline-row">
+              <span>{new Date(message.time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
+              <b style={{ color: message.color }}>{message.owner}</b>
+              <p>{message.text}</p>
+            </div>
+          )) : <div className="shared-empty-line">아직 공유된 timestamp가 없어요.</div>}
+        </div>
+      </section>
+
+      <section className="shared-section">
+        <h3>achievement</h3>
+        <div className="shared-progress-list">
+          <SharedProgress name={displayName || "나" } color={color} todos={myTodos} />
+          <SharedProgress name="Twin" color={partnerColor} todos={partnerTodos} />
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function UserSharedCard({ user, todos, note, labels, notShared }: { user: { name: string; color: string; isSelf?: boolean }; todos: TodoItem[]; note: string; labels: CategoryLabels; notShared: boolean }) {
+  const isEmpty = !todos.length && !note.trim();
+  return (
+    <section
+      className={`user-shared-card ${notShared || isEmpty ? "muted" : ""}`}
+      style={{ borderColor: `${user.color}33` }}
+    >
+      <div className="user-shared-head">
+        <h3 style={{ color: user.color }}>{user.name}</h3>
+        {user.isSelf && <span style={{ background: `${user.color}18`, color: user.color }}>ME</span>}
+      </div>
+      {notShared ? (
+        <div className="shared-card-empty">아직 공유되지 않았어요.</div>
+      ) : isEmpty ? (
+        <div className="shared-card-empty">오늘의 기록이 비어 있어요.</div>
+      ) : (
+        <>
+          {note.trim() && <p className="shared-note" style={{ color: user.color }}>{note}</p>}
+          {CATEGORY_ORDER.map((key) => {
+            const items = todos.filter((todo) => todo.categoryKey === key);
+            if (!items.length) return null;
+            return (
+              <div className="shared-category" key={key}>
+                <span style={{ color: user.color }}>{labels[key]}</span>
+                {items.map((todo) => (
+                  <div className="shared-todo" key={todo.id}>
+                    <span>{BULLETS[todo.state ?? 0]}</span>
+                    <p>{todo.title}</p>
+                    {todo.important && <b style={{ color: user.color }}>★</b>}
+                    {todo.memo && <small>{todo.memo}</small>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </section>
+  );
+}
+
+function SharedProgress({ name, color, todos }: { name: string; color: string; todos: TodoItem[] }) {
+  const done = todos.filter((todo) => (todo.state ?? 0) === 1).length;
+  const pct = todos.length ? Math.round((done / todos.length) * 100) : 0;
+  return (
+    <div className="shared-progress-row">
+      <span>{name}</span>
+      <div><i style={{ width: `${pct}%`, background: color }} /></div>
+      <b style={{ color }}>{pct}%</b>
+    </div>
+  );
 }
 
 function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels: CategoryLabels; routines: Routine[]; onClose: () => void }) {
