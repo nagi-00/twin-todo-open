@@ -13,6 +13,7 @@ import { db } from "../firebase";
 import type { CategoryKey, Routine } from "../types";
 
 export type DateColorMap = Record<string, string>;
+export type NoteMap = Record<string, string>;
 export type DailyEntry = {
   gratitude?: string[];
   mood?: string[];
@@ -49,6 +50,17 @@ export function subscribeDateColors(uid: string, callback: (colors: DateColorMap
       colors[item.id] = item.data().value ?? "#2d2d2d";
     });
     callback(colors);
+  });
+}
+
+export function subscribeNotes(uid: string, callback: (notes: NoteMap) => void) {
+  return onSnapshot(collection(requireDb(), "users", uid, "notes"), (snapshot) => {
+    const notes: NoteMap = {};
+    snapshot.forEach((item) => {
+      const text = item.data().text;
+      if (typeof text === "string" && text.trim()) notes[item.id] = text;
+    });
+    callback(notes);
   });
 }
 

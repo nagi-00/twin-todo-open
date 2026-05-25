@@ -1,6 +1,24 @@
 @font-face {
-  font-family: "TwinTodoFallback";
-  src: local("Malgun Gothic");
+  font-family: "LeeSeoyoon";
+  src: url("/fonts/leeseyoon.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Concon";
+  src: url("/fonts/concon.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maruminya";
+  src: url("/fonts/maruminya.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PretendardLocal";
+  src: url("/fonts/pretendard.otf") format("opentype");
   font-display: swap;
 }
 
@@ -13,7 +31,7 @@
 }
 
 body {
-  font-family: "TwinTodoFallback", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--app-font, "LeeSeoyoon", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif);
   background: #ebebeb;
   color: #333;
   min-height: 100vh;
@@ -193,6 +211,10 @@ select {
   background: transparent;
   color: #555;
   font-size: 0.75rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .day.selected {
@@ -204,6 +226,45 @@ select {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
   border-top: 1px solid #f5f5f5;
+}
+
+.font-panel {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #f5f5f5;
+}
+
+.font-panel > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.note-list-item {
+  background: #f8f8f8;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.note-list-item div {
+  font-size: 0.65rem;
+  color: #bbb;
+  margin-bottom: 0.2rem;
+}
+
+.note-list-item p {
+  font-size: 0.82rem;
+  font-weight: bold;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.empty-note-list {
+  text-align: center;
+  color: #ddd;
+  font-size: 0.78rem;
+  padding: 1rem 0;
 }
 
 .scope-toggle {
@@ -628,7 +689,8 @@ select {
 
 .weather-panel {
   position: absolute;
-  bottom: 42px;
+  bottom: auto;
+  top: 42px;
   left: 0;
   width: 160px;
   background: #fff;
@@ -687,14 +749,23 @@ select {
 
 .pomo-widget .widget-panel,
 .demian-widget .widget-panel {
-  bottom: 62px;
-  right: 0;
+  bottom: auto;
+  top: 42px;
+  left: 0;
   margin-top: 0;
+}
+
+.demian-widget .widget-panel {
+  top: auto;
+  bottom: 62px;
+  left: auto;
+  right: 0;
 }
 
 .music-panel {
   position: absolute;
-  bottom: 42px;
+  bottom: auto;
+  top: 42px;
   width: 290px;
   background: #fff;
   border-radius: 12px;

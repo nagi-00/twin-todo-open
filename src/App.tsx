@@ -33,6 +33,7 @@ import {
   saveSharedDay,
   subscribeDaily,
   subscribeDateColors,
+  subscribeNotes,
   subscribeTextDoc,
   subscribeMessages,
   subscribeRoutines,
@@ -55,6 +56,13 @@ const CARD: CSSProperties = {
   boxShadow: "0 1px 5px rgba(0,0,0,0.07)",
   padding: "1.5rem",
 };
+const FONT_OPTIONS = [
+  { key: "leeseyoon", label: "이서윤", family: "LeeSeoyoon" },
+  { key: "concon", label: "콘콘", family: "Concon" },
+  { key: "maruminya", label: "마루미냐", family: "Maruminya" },
+  { key: "pretendard", label: "프리텐다드", family: "PretendardLocal" },
+] as const;
+type FontKey = typeof FONT_OPTIONS[number]["key"];
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
 const CATEGORY_ACCENT: Record<CategoryKey, string> = {
   required: "#8A4545",
@@ -226,11 +234,19 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [requests, setRequests] = useState<PairRequest[]>([]);
   const [scopeMode, setScopeMode] = useState<"solo" | "pair">("solo");
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
   useEffect(() => subscribePairRequests(user.uid, setRequests), [user.uid]);
   useEffect(() => subscribeDateColors(user.uid, setDateColors), [user.uid]);
+  useEffect(() => subscribeNotes(user.uid, setNotes), [user.uid]);
+  useEffect(() => {
+    const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
+    document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
+    localStorage.setItem("twintodoFont", found.key);
+  }, [fontKey]);
 
   const dateKey = toDateKey(selectedDate);
   const color = dateColors[dateKey] || "#2d2d2d";
@@ -243,7 +259,8 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
       <aside className={sidebarOpen ? "sidebar open" : "sidebar"}>
         <div style={{ padding: "1.25rem 1rem 2rem" }}>
           <ProfilePanel user={user} profile={profile} color={color} />
-          <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} accent={color} />
+          <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />
+          <FontPanel fontKey={fontKey} onChange={setFontKey} color={color} />
           <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={setScopeMode} color={color} />
         </div>
       </aside>
@@ -401,10 +418,12 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
   );
 }
 
-function CalendarPanel({ selectedDate, onSelect, colors, accent }: { selectedDate: Date; onSelect: (date: Date) => void; colors: Record<string, string>; accent: string }) {
+function CalendarPanel({ selectedDate, onSelect, colors, notes, accent }: { selectedDate: Date; onSelect: (date: Date) => void; colors: Record<string, string>; notes: Record<string, string>; accent: string }) {
   const [anchor, setAnchor] = useState(selectedDate);
+  const [notesList, setNotesList] = useState(false);
   const cells = useMemo(() => monthMatrix(anchor), [anchor]);
   const selectedKey = toDateKey(selectedDate);
+  const todayKey = toDateKey(new Date());
   return (
     <section className="calendar-panel">
       <div style={{ textAlign: "center", marginBottom: "1rem" }}>
@@ -416,17 +435,51 @@ function CalendarPanel({ selectedDate, onSelect, colors, accent }: { selectedDat
           <button onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))} style={pill("#f5f5f5", "#888", true)}>→</button>
         </div>
       </div>
-      <div className="cal-grid week">{["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}</div>
-      <div className="cal-grid">
-        {cells.map((cell, i) => {
-          if (!cell) return <span key={`e-${i}`} />;
-          const key = toDateKey(cell);
-          const isSelected = key === selectedKey;
-          return <button key={key} className={isSelected ? "day selected" : "day"} style={isSelected ? { background: accent } : { color: colors[key] || undefined }} onClick={() => onSelect(cell)}>{cell.getDate()}</button>;
-        })}
-      </div>
+      <button onClick={() => setNotesList((value) => !value)} style={{ ...pill("#f7f7f7", "#aaa", true), width: "100%", marginBottom: ".75rem", borderRadius: ".4rem", textAlign: "center" }}>{notesList ? "← back" : "Notes"}</button>
+      {!notesList ? <>
+        <div className="cal-grid week">{["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <span key={`${d}-${i}`}>{d}</span>)}</div>
+        <div className="cal-grid">
+          {cells.map((cell, i) => {
+            if (!cell) return <span key={`e-${i}`} />;
+            const key = toDateKey(cell);
+            const isSelected = key === selectedKey;
+            const isToday = key === todayKey;
+            const dayColor = colors[key] || accent;
+            return <button
+              key={key}
+              className={isSelected ? "day selected" : "day"}
+              style={{
+                border: `1.5px solid ${isToday && !isSelected ? dayColor : "transparent"}`,
+                background: isSelected ? dayColor : "transparent",
+                color: isSelected ? "#fff" : isToday ? dayColor : "#444",
+                fontWeight: isToday ? "bold" : 400,
+              }}
+              onClick={() => onSelect(cell)}
+            >{cell.getDate()}{notes[key] && <span style={{ position: "absolute", bottom: "2px", width: "4px", height: "4px", borderRadius: "50%", background: isSelected ? "rgba(255,255,255,.7)" : dayColor }} />}</button>;
+          })}
+        </div>
+      </> : <div>
+        {Object.entries(notes).sort((a, b) => b[0].localeCompare(a[0])).map(([date, text]) => (
+          <div key={date} className="note-list-item">
+            <div>{new Date(`${date}T00:00:00`).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+            <p style={{ color: colors[date] || accent }}>{text}</p>
+          </div>
+        ))}
+        {Object.keys(notes).length === 0 && <div className="empty-note-list">아직 저장된 한마디가 없습니다.</div>}
+      </div>}
     </section>
   );
+}
+
+function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (key: FontKey) => void; color: string }) {
+  return <section className="font-panel">
+    <span style={sectionLabel()}>font</span>
+    <div>
+      {FONT_OPTIONS.map((font) => (
+        <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "#f5f5f5", fontKey === font.key ? "#fff" : "#aaa", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
+      ))}
+    </div>
+  </section>;
 }
 
 function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequest[]; pair: Pair | null; mode: "solo" | "pair"; onMode: (mode: "solo" | "pair") => void; color: string }) {
@@ -671,16 +724,51 @@ function MoodPicker({ value, onChange, color }: { value: string[]; onChange: (va
 }
 
 function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
-  const start = addDays(selectedDate, -selectedDate.getDay());
-  return <section className="main-card"><span className="micro-label">ᴡᴇᴇᴋ</span><div className="week-list">{Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((date) => <WeekDayMini key={toDateKey(date)} uid={uid} date={date} />)}</div></section>;
+  const [dateColors, setDateColors] = useState<Record<string, string>>({});
+  useEffect(() => subscribeDateColors(uid, setDateColors), [uid]);
+  const mondayOffset = selectedDate.getDay() === 0 ? -6 : 1 - selectedDate.getDay();
+  const start = addDays(selectedDate, mondayOffset);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  return <section style={CARD}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem" }}>
+      <div>
+        <span style={sectionLabel({ marginBottom: ".2rem" })}>ᴡᴇᴇᴋʟʏ ʀᴇᴠɪᴇᴡ</span>
+        <div style={{ fontSize: ".78rem", color: "#bbb" }}>{toDateKey(days[0])} - {toDateKey(days[6])}</div>
+      </div>
+    </div>
+    <div style={{ borderTop: "1px solid #f0f0f0", marginBottom: "1rem" }} />
+    {days.map((date) => <WeekDayMini key={toDateKey(date)} uid={uid} date={date} color={dateColors[toDateKey(date)] || "#2d2d2d"} />)}
+  </section>;
 }
 
-function WeekDayMini({ uid, date }: { uid: string; date: Date }) {
+function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: string }) {
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [note, setNote] = useState("");
   const scope = useMemo<Scope>(() => ({ type: "solo", uid }), [uid]);
   const key = toDateKey(date);
   useEffect(() => subscribeTodos(scope, key, setTodos), [scope, key]);
-  return <div className="week-mini"><b>{WEEK_KO[date.getDay()]} {date.getDate()}</b><span>{todos.filter((t) => t.status !== "archived").length} items</span></div>;
+  useEffect(() => subscribeTextDoc(["users", uid, "notes", key], "text", setNote), [uid, key]);
+  const visible = todos.filter((todo) => todo.status !== "archived" && !todo.hidden);
+  const done = visible.filter((todo) => (todo.state ?? 0) === 1).length;
+  const pct = visible.length ? Math.round(done / visible.length * 100) : 0;
+  const todayKey = toDateKey(new Date());
+  const isToday = key === todayKey;
+  const isFuture = key > todayKey;
+  return <div style={{ padding: ".5rem .65rem", borderRadius: ".4rem", marginBottom: ".3rem", border: `1.5px solid ${isToday ? color : "transparent"}`, background: isToday ? `${color}07` : "transparent", opacity: isFuture ? 0.32 : 1 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: ".55rem" }}>
+      <div style={{ minWidth: "4.2rem", display: "flex", gap: ".3rem", alignItems: "baseline" }}>
+        <span style={{ fontSize: ".67rem", color: "#bbb" }}>{date.toLocaleString("en-US", { weekday: "short" })}</span>
+        <span style={{ fontSize: ".88rem", fontWeight: isToday ? "bold" : 500, color: isToday ? color : "#333" }}>{date.getDate()}</span>
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ height: "2.5px", background: "#f0f0f0", borderRadius: "9999px", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "9999px", transition: "width .5s" }} />
+        </div>
+      </div>
+      <span style={{ fontSize: ".7rem", color: "#bbb", minWidth: "2rem", textAlign: "right" }}>{visible.length ? `${done}/${visible.length}` : "—"}</span>
+    </div>
+    {note && !isFuture && <div style={{ fontSize: ".7rem", color: "#bbb", marginTop: ".22rem", paddingLeft: "4.9rem", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>"{note}"</div>}
+  </div>;
 }
 
 function SharedView({ uid, dateKey, color, pair }: { uid: string; dateKey: string; color: string; pair: Pair | null }) {
