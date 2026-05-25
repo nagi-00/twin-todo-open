@@ -13,6 +13,7 @@ export type UserProfile = {
   avatarPath: string | null;
   backgroundPath?: string | null;
   backgroundOpacity?: number;
+  defaultThemeColor?: string;
   role: "user";
   createdAt?: unknown;
   updatedAt?: unknown;

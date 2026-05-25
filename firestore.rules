@@ -47,6 +47,12 @@ service cloud.firestore {
       return value is string && value.size() >= 1 && value.size() <= 12;
     }
 
+    function validHexColor(value) {
+      return value is string
+        && value.size() == 7
+        && value.matches("^#[0-9a-fA-F]{6}$");
+    }
+
     function validCategorySettings() {
       return request.resource.data.keys().hasOnly([
           "required",
@@ -96,6 +102,7 @@ service cloud.firestore {
           "avatarPath",
           "backgroundPath",
           "backgroundOpacity",
+          "defaultThemeColor",
           "role",
           "createdAt",
           "updatedAt"
@@ -115,12 +122,15 @@ service cloud.firestore {
           "avatarPath",
           "backgroundPath",
           "backgroundOpacity",
+          "defaultThemeColor",
           "updatedAt"
         ])
         && (!("backgroundOpacity" in request.resource.data)
           || (request.resource.data.backgroundOpacity is number
             && request.resource.data.backgroundOpacity >= 0
-            && request.resource.data.backgroundOpacity <= 0.7));
+            && request.resource.data.backgroundOpacity <= 0.7))
+        && (!("defaultThemeColor" in request.resource.data)
+          || validHexColor(request.resource.data.defaultThemeColor));
 
       allow delete: if false;
 

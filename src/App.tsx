@@ -22,7 +22,7 @@ import { saveCategories, subscribeCategories } from "./services/categories";
 import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, getPairPartnerInfo, rejectPairRequest } from "./services/functions";
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
 import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
-import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar, uploadBackground } from "./services/profile";
+import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDefaultThemeColor, updateDisplayName, uploadAvatar, uploadBackground } from "./services/profile";
 import { addTodo, archiveTodo, getTodosForDate, reorderTodos, subscribeTodos, updateTodoPatch, updateTodoTitle } from "./services/todos";
 import {
   addRoutine,
@@ -431,7 +431,8 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   }, [profile.backgroundPath]);
 
   const dateKey = toDateKey(selectedDate);
-  const color = dateColors[dateKey] || "#2d2d2d";
+  const defaultThemeColor = profile.defaultThemeColor || "#2d2d2d";
+  const color = dateColors[dateKey] || defaultThemeColor;
   const scope: Scope = useMemo(() => ({ type: "solo", uid: user.uid }), [user.uid]);
   const backgroundOpacity = Math.max(0, Math.min(0.7, profile.backgroundOpacity ?? 0.18));
 
@@ -446,6 +447,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             user={user}
             profile={profile}
             color={color}
+            defaultThemeColor={defaultThemeColor}
             fontKey={fontKey}
             onFontChange={setFontKey}
             darkMode={darkMode}
@@ -480,7 +482,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
 
         {tab === "todo" && <TodoView scope={scope} pair={pair} uid={user.uid} profile={profile} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "journal" && <JournalView uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
-        {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
+        {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} defaultThemeColor={defaultThemeColor} />}
         {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} partnerName={partnerName} dateKey={dateKey} color={color} pair={pair} />}
       </main>
       <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
@@ -495,6 +497,7 @@ function ProfilePanel({
   user,
   profile,
   color,
+  defaultThemeColor,
   fontKey,
   onFontChange,
   darkMode,
@@ -507,6 +510,7 @@ function ProfilePanel({
   user: User;
   profile: UserProfile;
   color: string;
+  defaultThemeColor: string;
   fontKey: FontKey;
   onFontChange: (key: FontKey) => void;
   darkMode: boolean;
@@ -570,6 +574,7 @@ function ProfilePanel({
         {editing && (
           <div className="profile-settings">
             <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
+            <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} currentColor={color} />
             <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
             <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
             <PairPanel requests={requests} pair={pair} color={color} />
@@ -898,6 +903,33 @@ function ThemePanel({ darkMode, onChange, color }: { darkMode: boolean; onChange
       <b>{darkMode ? "dark" : "light"}</b>
     </button>
   </section>;
+}
+
+function DefaultThemeColorPanel({ uid, value, currentColor }: { uid: string; value: string; currentColor: string }) {
+  const [draft, setDraft] = useState(value);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDraft(value);
+    setSaved(false);
+  }, [value]);
+
+  async function save() {
+    await updateDefaultThemeColor(uid, draft);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1300);
+  }
+
+  return (
+    <section className="default-color-panel">
+      <span style={sectionLabel()}>default color</span>
+      <div className="default-color-row">
+        <input type="color" value={draft} onChange={(event) => setDraft(event.target.value)} aria-label="기본 테마색" />
+        <button type="button" onClick={() => setDraft(currentColor)}>오늘 색 가져오기</button>
+        <button type="button" className="save-default-color" onClick={save} style={{ background: draft }}>{saved ? "저장됨" : "저장"}</button>
+      </div>
+    </section>
+  );
 }
 
 function PairPanel({ requests, pair, color }: { requests: PairRequest[]; pair: Pair | null; color: string }) {
@@ -1593,7 +1625,7 @@ function PrintBlock({ label, color, children }: { label: string; color: string; 
   </section>;
 }
 
-function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
+function WeekView({ uid, selectedDate, defaultThemeColor }: { uid: string; selectedDate: Date; defaultThemeColor: string }) {
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
   useEffect(() => subscribeDateColors(uid, setDateColors), [uid]);
   const mondayOffset = selectedDate.getDay() === 0 ? -6 : 1 - selectedDate.getDay();
@@ -1607,7 +1639,7 @@ function WeekView({ uid, selectedDate }: { uid: string; selectedDate: Date }) {
       </div>
     </div>
     <div style={{ borderTop: "1px solid var(--soft-line)", marginBottom: "1rem" }} />
-    {days.map((date) => <WeekDayMini key={toDateKey(date)} uid={uid} date={date} color={dateColors[toDateKey(date)] || "#2d2d2d"} />)}
+    {days.map((date) => <WeekDayMini key={toDateKey(date)} uid={uid} date={date} color={dateColors[toDateKey(date)] || defaultThemeColor} />)}
   </section>;
 }
 

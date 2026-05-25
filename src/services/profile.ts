@@ -36,6 +36,7 @@ export async function ensureUserProfile(user: User) {
       avatarPath: null,
       backgroundPath: null,
       backgroundOpacity: 0.18,
+      defaultThemeColor: "#2d2d2d",
       role: "user",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -48,6 +49,14 @@ export async function updateDisplayName(uid: string, displayName: string) {
   if (!db) throw new Error("Firestore is not configured.");
   await updateDoc(doc(db, "users", uid), {
     displayName,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updateDefaultThemeColor(uid: string, defaultThemeColor: string) {
+  if (!db) throw new Error("Firestore is not configured.");
+  await updateDoc(doc(db, "users", uid), {
+    defaultThemeColor,
     updatedAt: serverTimestamp(),
   });
 }

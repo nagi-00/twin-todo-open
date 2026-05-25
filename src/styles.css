@@ -399,6 +399,18 @@ select {
   border-top: 1px solid var(--line);
 }
 
+.profile-settings .default-color-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.profile-settings .default-color-panel + .font-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
 .profile-settings .background-panel {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -420,6 +432,38 @@ select {
   font-family: inherit;
   font-size: 0.72rem;
   padding: 0.42rem 0.7rem;
+}
+
+.default-color-row {
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.default-color-row input[type="color"] {
+  width: 2.15rem;
+  height: 2rem;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: var(--field-bg);
+}
+
+.default-color-row button {
+  min-height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-family: var(--ui-font);
+  font-size: 0.68rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.default-color-row .save-default-color {
+  color: #fff;
+  min-width: 3.5rem;
 }
 
 .font-panel > div {
