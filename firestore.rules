@@ -34,7 +34,7 @@ service cloud.firestore {
     }
 
     function validTodoTitle(value) {
-      return value is string && value.size() >= 1 && value.size() <= 120;
+      return value is string && value.size() >= 1 && value.size() <= 1000;
     }
 
     function validCategoryLabel(value) {
@@ -183,6 +183,18 @@ service cloud.firestore {
       match /settings/categories {
         allow read: if isPairMember(pairId);
         allow create, update: if isPairMember(pairId) && validCategorySettings();
+        allow delete: if false;
+      }
+
+      match /shared/{sharedId} {
+        allow read: if isPairMember(pairId);
+        allow create, update: if isPairMember(pairId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.date is string
+          && request.resource.data.todos is list
+          && request.resource.data.note is string
+          && request.resource.data.color is string
+          && request.resource.data.messages is list;
         allow delete: if false;
       }
     }

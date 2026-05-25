@@ -111,12 +111,12 @@ select {
 .dark-btn {
   width: 100%;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: none;
   background: #2d2d2d;
   color: #fff;
-  font-size: 0.85rem;
-  font-weight: bold;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .soft-input {
@@ -176,7 +176,7 @@ select {
   margin-top: 0.75rem;
   padding: 0.75rem;
   background: #f8f8f8;
-  border-radius: 8px;
+  border-radius: 14px;
   text-align: left;
 }
 
@@ -418,9 +418,9 @@ select {
   padding: 0.45rem 0.55rem;
   border-radius: 0.4rem;
   resize: none;
-  font-weight: bold;
+  font-weight: 500;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   line-height: 1.65;
   margin-bottom: 1rem;
   color: inherit;
@@ -433,7 +433,13 @@ select {
   margin-bottom: 1.1rem;
 }
 
-.todo-input-grid textarea {
+.todo-input-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.todo-input-card textarea {
   border: 1px solid #eee;
   padding: 0.4rem 0.5rem;
   border-radius: 0.4rem;
@@ -445,12 +451,31 @@ select {
   background: #fafafa;
 }
 
+.todo-input-card button,
+.timestamp-input button,
+.unlink-btn,
+.routine-row button,
+.weekday-pills button,
+.widget-panel > button {
+  border: none;
+  border-radius: 9999px;
+  background: #f5f5f5;
+  color: #aaa;
+  font-family: inherit;
+  font-size: 0.68rem;
+  padding: 0.28rem 0.72rem;
+}
+
+.todo-input-card button {
+  align-self: flex-end;
+}
+
 .todo-item {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   padding: 0.05rem 0.2rem 0.05rem 0.1rem;
-  border-radius: 3px;
+  border-radius: 9999px;
   margin-bottom: 0.22rem;
   transition: background-color 0.65s ease-out, opacity 0.2s;
 }
@@ -458,7 +483,7 @@ select {
 .todo-item > span {
   flex: 1;
   white-space: pre-wrap;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   line-height: 1.6;
   align-self: baseline;
 }
@@ -470,7 +495,7 @@ select {
   border-bottom: 1px solid rgba(45, 45, 45, 0.3);
   background: transparent;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   line-height: 1.6;
   outline: none;
   padding: 0;
@@ -482,7 +507,7 @@ select {
   border: none;
   font-family: monospace;
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   align-self: baseline;
 }
 
@@ -557,9 +582,80 @@ select {
 .shared-card,
 .message-box,
 .routine-row {
-  border-radius: 8px;
+  border-radius: 14px;
   background: #fafafa;
   padding: 0.75rem;
+}
+
+.routine-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.routine-row span {
+  flex: 1;
+  font-size: 0.78rem;
+  color: #555;
+}
+
+.routine-row small {
+  color: #bbb;
+  font-size: 0.62rem;
+}
+
+.weekday-pills {
+  display: flex;
+  gap: 0.32rem;
+  margin: 0.55rem 0 0.75rem;
+}
+
+.weekday-pills button.active {
+  background: #333;
+  color: #fff;
+}
+
+.timestamp-box {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #f5f5f5;
+}
+
+.timestamp-box p {
+  margin: 0.18rem 0;
+  color: #888;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.timestamp-box p b {
+  display: inline-block;
+  min-width: 3.4rem;
+  color: #c8c8c8;
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.timestamp-input {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-end;
+  margin-top: 0.45rem;
+}
+
+.timestamp-input textarea {
+  flex: 1;
+  border: 1px solid #eee;
+  border-radius: 0.55rem;
+  resize: vertical;
+  padding: 0.42rem 0.55rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #555;
+  background: #fafafa;
 }
 
 .week-mini {
@@ -726,6 +822,10 @@ select {
   z-index: 1000;
 }
 
+.widget-open {
+  z-index: 1600;
+}
+
 .memo-widget {
   top: 1rem;
   right: 1rem;
@@ -784,7 +884,7 @@ select {
   left: 0;
   width: 160px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
   border: 1px solid #f0f0f0;
   padding: 14px 16px 12px;
@@ -845,6 +945,60 @@ select {
   margin-top: 0;
 }
 
+.pomo-panel b {
+  display: block;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #333;
+  margin: 0.45rem 0;
+}
+
+.pomo-modes {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pomo-modes button,
+.pomo-settings input {
+  border: 1px solid #eee;
+  border-radius: 9999px;
+  background: #fafafa;
+  color: #aaa;
+  font-family: inherit;
+}
+
+.pomo-modes button {
+  flex: 1;
+  padding: 0.25rem 0.3rem;
+  font-size: 0.62rem;
+}
+
+.pomo-modes button.active {
+  background: #333;
+  color: #fff;
+}
+
+.pomo-settings {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.55rem;
+}
+
+.pomo-settings label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
+  color: #999;
+}
+
+.pomo-settings input {
+  width: 3rem;
+  padding: 0.18rem 0.4rem;
+  text-align: center;
+}
+
 .demian-widget .widget-panel {
   top: auto;
   bottom: 62px;
@@ -858,7 +1012,7 @@ select {
   top: auto;
   width: 290px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
   border: 1px solid #f0f0f0;
@@ -899,7 +1053,7 @@ select {
   flex: 1;
   background: #f8f8f8;
   border: 1px solid #eee;
-  border-radius: 6px;
+  border-radius: 9999px;
   padding: 0.3rem 0.55rem;
   color: #555;
   font-size: 10px;
@@ -907,7 +1061,7 @@ select {
 
 .music-url button {
   border: none;
-  border-radius: 6px;
+  border-radius: 9999px;
   color: #fff;
   font-size: 11px;
   padding: 0 0.55rem;
@@ -924,7 +1078,7 @@ select {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: 9999px;
   margin-bottom: 2px;
   cursor: pointer;
 }
@@ -972,7 +1126,7 @@ select {
   margin-top: 4px;
   background: #f5f5f5;
   border: none;
-  border-radius: 6px;
+  border-radius: 9999px;
   color: #aaa;
   font-size: 10px;
   padding: 0.3rem 0.75rem;
@@ -1056,7 +1210,7 @@ select {
   width: 2.9rem;
   padding: 0.2rem;
   border: 1px solid #eee;
-  border-radius: 4px;
+  border-radius: 9999px;
   text-align: center;
   font-size: 10px;
 }
@@ -1079,7 +1233,7 @@ select {
   width: 100%;
   min-height: 70px;
   border: 1px solid #eee;
-  border-radius: 0.4rem;
+  border-radius: 0.65rem;
   padding: 0.45rem 0.55rem;
   resize: vertical;
 }

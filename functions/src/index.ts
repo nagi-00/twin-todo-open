@@ -242,3 +242,28 @@ export const rejectPairRequest = onCall(callableOptions, async (request) => {
 
   return { ok: true };
 });
+
+export const disconnectPair = onCall(callableOptions, async (request) => {
+  const uid = requireUid(request.auth);
+  const pairId = request.data?.pairId;
+  if (typeof pairId !== "string") throw new HttpsError("invalid-argument", "연결 ID가 필요합니다.");
+
+  await db.runTransaction(async (tx) => {
+    const pairRef = db.doc(`pairs/${pairId}`);
+    const pairSnap = await tx.get(pairRef);
+    if (!pairSnap.exists) throw new HttpsError("not-found", "연결을 찾을 수 없습니다.");
+
+    const data = pairSnap.data()!;
+    if (data.status !== "active" || data.memberMap?.[uid] !== true) {
+      throw new HttpsError("permission-denied", "연결 해제 권한이 없습니다.");
+    }
+
+    tx.update(pairRef, {
+      status: "deleted",
+      deletedBy: uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return { ok: true };
+});

@@ -30,3 +30,8 @@ export async function rejectPairRequest(requestId: string) {
   const fn = callable<{ requestId: string }, { ok: true }>("rejectPairRequest");
   return (await fn({ requestId })).data;
 }
+
+export async function disconnectPair(pairId: string) {
+  const fn = callable<{ pairId: string }, { ok: true }>("disconnectPair");
+  return (await fn({ pairId })).data;
+}

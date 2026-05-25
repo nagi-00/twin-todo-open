@@ -2,24 +2,24 @@ import { User } from "firebase/auth";
 import html2canvas from "html2canvas";
 import {
   Edit3,
-  Eye,
-  EyeOff,
   Link2,
+  Lock,
   LogOut,
   Pause,
   Play,
   RotateCcw,
+  Unlock,
   Upload,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { isFirebaseConfigured } from "./firebase";
 import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
 import { logout, signInWithGoogle, subscribeAuth } from "./services/auth";
 import { saveCategories, subscribeCategories } from "./services/categories";
-import { acceptPairRequest, claimNickname, createPairRequest, rejectPairRequest } from "./services/functions";
+import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, rejectPairRequest } from "./services/functions";
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
 import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
 import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar } from "./services/profile";
@@ -28,15 +28,18 @@ import {
   addRoutine,
   DailyEntry,
   Message,
+  removeRoutine,
   saveDaily,
   saveDateColor,
   saveMessages,
+  savePairSharedDay,
   saveSharedDay,
   subscribeDaily,
   subscribeDateColors,
   subscribeNotes,
   subscribeTextDoc,
   subscribeMessages,
+  subscribePairSharedDay,
   subscribeRoutines,
   subscribeSharedDay,
   saveTextDoc,
@@ -78,6 +81,10 @@ const PAPER_TEXTURES = [
   "/textures/papertex5.png",
   "/textures/papertex6.jpg",
 ];
+
+function isCoarsePointer() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
 
 function pill(bg = "#f0f0f0", fg = "#666", sm = false) {
   return {
@@ -249,7 +256,7 @@ function HandleOnboarding({ displayName }: { displayName: string }) {
       <section className="login-card">
         <span className="micro-label">first step</span>
         <h1>ID 만들기</h1>
-        <p>이 ID는 @nagi처럼 표시되고, 다른 사용자가 연결 요청을 보낼 때 쓰는 고유 핸들이에요.</p>
+        <p>이 ID는 @nagi처럼 표시되고, 다른 사용자가 연결 요청을 보낼 때 쓰는 고유 핸들이에요. 한 번 만들면 변경할 수 없습니다.</p>
         <input className="soft-input" value={handle} maxLength={20} onChange={(event) => setHandle(event.target.value)} onKeyDown={(event) => event.key === "Enter" && submit()} />
         <button className="dark-btn" onClick={submit} disabled={busy || handle.trim().length < 2}>
           {busy ? "확인 중..." : "시작하기"}
@@ -269,6 +276,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeWidget, setActiveWidget] = useState<null | "memo" | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
@@ -305,7 +313,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
           <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />
         </div>
       </aside>
-      <main className="main main-content">
+      <main className="main main-content" onClick={() => activeWidget && setActiveWidget(null)}>
         <div className="tab-bar">
           {[
             ["todo", "ᴛᴏᴅᴏ"],
@@ -330,10 +338,10 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
         {tab === "shared" && <SharedView uid={user.uid} dateKey={dateKey} color={color} pair={pair} />}
       </main>
-      <MemoWidget />
-      <WeatherWidget color={color} />
-      <MusicWidget userId={user.uid} color={color} />
-      <PomodoroWidget color={color} />
+      <MemoWidget open={activeWidget === "memo"} onToggle={() => setActiveWidget((value) => value === "memo" ? null : "memo")} />
+      <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
+      <MusicWidget userId={user.uid} color={color} open={activeWidget === "music"} onToggle={() => setActiveWidget((value) => value === "music" ? null : "music")} />
+      <PomodoroWidget color={color} open={activeWidget === "pomo"} onToggle={() => setActiveWidget((value) => value === "pomo" ? null : "pomo")} />
       {user.email === ADMIN_EMAIL && <DemianWidget />}
     </div>
   );
@@ -362,6 +370,7 @@ function ProfilePanel({
 }) {
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
+  const [draftFontKey, setDraftFontKey] = useState<FontKey>(fontKey);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
@@ -369,9 +378,14 @@ function ProfilePanel({
     getAvatarUrl(profile.avatarPath).then(setAvatarUrl).catch(() => setAvatarUrl(null));
   }, [profile.avatarPath]);
 
+  useEffect(() => {
+    if (editing) setDraftFontKey(fontKey);
+  }, [editing, fontKey]);
+
   async function saveName() {
     if (!name.trim()) return;
     await updateDisplayName(user.uid, name.trim());
+    onFontChange(draftFontKey);
     setEditing(false);
   }
 
@@ -395,13 +409,14 @@ function ProfilePanel({
           )}
         </div>
         <div style={{ fontSize: ".62rem", color: "#c6c6c6", letterSpacing: ".08em", marginBottom: ".45rem" }}>@{profile.nickname}</div>
+        {editing && <p className="tiny-note" style={{ textAlign: "center", margin: "0 0 .45rem" }}>ID는 연결 보안을 위해 변경할 수 없습니다.</p>}
         <div style={{ display: "flex", gap: ".3rem", justifyContent: "center" }}>
           <button onClick={logout} style={pill("#f5f5f5", "#aaa", true)}><LogOut size={12} /> 로그아웃</button>
           <button onClick={editing ? saveName : () => setEditing(true)} style={pill(editing ? color : "#f5f5f5", editing ? "#fff" : "#aaa", true)}><Edit3 size={12} /> {editing ? "저장" : "편집"}</button>
         </div>
         {editing && (
           <div className="profile-settings">
-            <FontPanel fontKey={fontKey} onChange={onFontChange} color={color} />
+            <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
             <PairPanel requests={requests} pair={pair} mode={scopeMode} onMode={onScopeMode} color={color} />
           </div>
         )}
@@ -440,8 +455,10 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
       ctx.translate(128 + x, 128 + y);
       ctx.rotate((angle * Math.PI) / 180);
       ctx.scale((flipX ? -1 : 1) * scale, (flipY ? -1 : 1) * scale);
-      const size = Math.max(image.width, image.height);
-      ctx.drawImage(image, -size / 2, -size / 2, size, size);
+      const fit = Math.min(240 / image.width, 240 / image.height);
+      const drawW = image.width * fit;
+      const drawH = image.height * fit;
+      ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);
       ctx.restore();
     };
     image.src = src;
@@ -605,6 +622,17 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
       setMessage(err instanceof Error ? err.message : "요청에 실패했습니다.");
     }
   }
+  async function unlink() {
+    if (!pair || !window.confirm("연결된 파트너를 해제할까요? 공유 공간은 닫히고 혼자 사용 모드로 전환됩니다.")) return;
+    setMessage("");
+    try {
+      await disconnectPair(pair.id);
+      onMode("solo");
+      setMessage("파트너 연결을 해제했습니다.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "연결 해제에 실패했습니다.");
+    }
+  }
   return (
     <section className="pair-panel">
       <div className="scope-toggle">
@@ -612,6 +640,7 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
         <button style={mode === "pair" ? { background: color, color: "#fff" } : undefined} disabled={!pair} onClick={() => onMode("pair")}>pair</button>
       </div>
       <span style={sectionLabel()}>ID로 연결</span>
+      {pair && <button className="unlink-btn" onClick={unlink}>연결된 파트너 해제</button>}
       <div className="tiny-form"><input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="상대 ID" /><button onClick={send}><Link2 size={14} /></button></div>
       {message && <p className="tiny-note">{message}</p>}
       {requests.map((req) => <div className="request" key={req.id}><span>@{req.fromNickname}</span><button onClick={() => acceptPairRequest(req.id)}>✓</button><button onClick={() => rejectPairRequest(req.id)}>×</button></div>)}
@@ -624,6 +653,9 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   const [labels, setLabels] = useState<CategoryLabels>(DEFAULT_CATEGORIES);
   const [inputs, setInputs] = useState<Record<CategoryKey, string>>({ required: "", growth: "", freedom: "" });
   const [note, setNote] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [todoError, setTodoError] = useState("");
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
@@ -635,6 +667,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
   useEffect(() => subscribeCategories(scope, setLabels), [scope, scopeKey]);
   useEffect(() => subscribeTextDoc(["users", uid, "notes", dateKey], "text", setNote), [uid, dateKey]);
+  useEffect(() => subscribeMessages(uid, dateKey, setMessages), [uid, dateKey]);
   useEffect(() => subscribeRoutines(uid, setRoutines), [uid]);
 
   const visible = todos.filter((todo) => todo.status !== "archived");
@@ -645,8 +678,26 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   async function submit(key: CategoryKey) {
     const text = inputs[key].trim();
     if (!text) return;
-    await addTodo(scope, dateKey, key, text);
-    setInputs((prev) => ({ ...prev, [key]: "" }));
+    setTodoError("");
+    try {
+      await addTodo(scope, dateKey, key, text);
+      setInputs((prev) => ({ ...prev, [key]: "" }));
+    } catch (err) {
+      setTodoError(err instanceof Error ? err.message : "할일 등록에 실패했습니다.");
+    }
+  }
+
+  function patchLocal(todoId: string, patch: Partial<TodoItem>) {
+    setTodos((prev) => prev.map((todo) => todo.id === todoId ? { ...todo, ...patch } : todo));
+  }
+
+  async function sendTimestamp() {
+    const text = messageInput.trim();
+    if (!text) return;
+    const next = [...messages, { text, time: Date.now() }];
+    setMessages(next);
+    setMessageInput("");
+    await saveMessages(uid, dateKey, next);
   }
 
   async function applyRoutines() {
@@ -656,8 +707,14 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   }
 
   async function shareToday() {
-    await saveSharedDay(uid, dateKey, { todos: visible, note, color, messages: [], updatedAt: null });
-    alert("오늘의 공유 카드가 업데이트되었습니다.");
+    try {
+      const payload = { todos: visible, note, color, messages, updatedAt: null };
+      await saveSharedDay(uid, dateKey, payload);
+      if (scope.type === "pair") await savePairSharedDay(scope.pairId, uid, dateKey, payload);
+      alert("오늘의 공유 카드가 업데이트되었습니다.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "공유 저장에 실패했습니다.");
+    }
   }
 
   async function printDaylog() {
@@ -694,16 +751,24 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
       <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} placeholder="오늘의 한마디" />
       <div className="todo-input-grid">
         {CATEGORY_ORDER.map((key) => (
-          <textarea
-            key={key}
-            value={inputs[key]}
-            onChange={(event) => setInputs((prev) => ({ ...prev, [key]: event.target.value }))}
-            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submit(key); } }}
-            placeholder={labels[key]}
-            rows={3}
-          />
+          <div className="todo-input-card" key={key}>
+            <textarea
+              value={inputs[key]}
+              onChange={(event) => setInputs((prev) => ({ ...prev, [key]: event.target.value }))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !isCoarsePointer()) {
+                  event.preventDefault();
+                  void submit(key);
+                }
+              }}
+              placeholder={labels[key]}
+              rows={3}
+            />
+            <button onClick={() => submit(key)}>추가</button>
+          </div>
         ))}
       </div>
+      {todoError && <p className="error-text">{todoError}</p>}
       <div>
         {CATEGORY_ORDER.map((key, idx) => {
           const catColor = CATEGORY_ACCENT[key] || color;
@@ -711,12 +776,33 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
           return (
             <div key={key} style={{ marginBottom: ".7rem" }}>
               <span style={sectionLabel({ color: `${catColor}bb` })}>{labels[key]}</span>
-              {list.map((todo) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} />)}
+              {list.map((todo) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} onPatch={patchLocal} />)}
               {list.length === 0 && !editMode && <div style={{ fontSize: ".75rem", color: "#e8e8e8", padding: ".1rem 0" }}>—</div>}
               {idx < CATEGORY_ORDER.length - 1 && <div style={{ borderTop: `1px solid ${color}22`, margin: ".6rem 0" }} />}
             </div>
           );
         })}
+      </div>
+      <div className="timestamp-box">
+        <span style={sectionLabel({ color })}>timestamp</span>
+        {messages.map((message) => (
+          <p key={message.time}><b>{new Date(message.time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</b>{message.text}</p>
+        ))}
+        <div className="timestamp-input">
+          <textarea
+            value={messageInput}
+            onChange={(event) => setMessageInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey && !isCoarsePointer()) {
+                event.preventDefault();
+                void sendTimestamp();
+              }
+            }}
+            placeholder="남기고 싶은 순간"
+            rows={2}
+          />
+          <button onClick={sendTimestamp}>stamp</button>
+        </div>
       </div>
       <div style={{ display: "flex", gap: ".4rem", marginTop: ".85rem", paddingTop: ".85rem", borderTop: "1px solid #f5f5f5" }}>
         <button onClick={printDaylog} style={pill(color, "#fff")}>print!</button>
@@ -736,33 +822,38 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   );
 }
 
-function TodoRow({ todo, scope, color, editMode }: { todo: TodoItem; scope: Scope; color: string; editMode: boolean }) {
+function TodoRow({ todo, scope, color, editMode, onPatch }: { todo: TodoItem; scope: Scope; color: string; editMode: boolean; onPatch: (todoId: string, patch: Partial<TodoItem>) => void }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(todo.title);
   const [memoOpen, setMemoOpen] = useState(false);
   const [memo, setMemo] = useState(todo.memo || "");
   const state = todo.state ?? (todo.status === "done" ? 1 : 0);
+  useEffect(() => setTitle(todo.title), [todo.title]);
+  useEffect(() => setMemo(todo.memo || ""), [todo.memo]);
   async function cycle() {
     const next = ((state + 1) % 3) as 0 | 1 | 2;
+    onPatch(todo.id, { state: next, status: next === 1 ? "done" : "open" });
     await updateTodoPatch(scope, todo, { state: next, status: next === 1 ? "done" : "open" });
   }
   async function save() {
+    onPatch(todo.id, { title: title.trim() });
     await updateTodoTitle(scope, todo, title);
     setEditing(false);
   }
   async function saveMemo(nextMemo = memo) {
+    onPatch(todo.id, { memo: nextMemo });
     await updateTodoPatch(scope, todo, { memo: nextMemo });
   }
   return <div style={{ marginBottom: todo.memo && !memoOpen ? ".35rem" : ".22rem" }}>
     <div className="todo-item" style={{ opacity: todo.hidden ? 0.4 : 1, backgroundColor: todo.important ? `${color}33` : "transparent" }}>
     <button className="bullet-btn" onClick={cycle} style={{ color }}>{BULLETS[state]}</button>
-    {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.hidden ? "숨긴 항목" : todo.title}</span>}
+    {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !isCoarsePointer()) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.hidden ? "숨긴 항목" : todo.title}</span>}
     <button className="icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8", fontSize: ".7rem", letterSpacing: "-.03em" }}>{todo.memo && !memoOpen ? "✎·" : " ✎"}</button>
-    <button className="icon-btn" onClick={() => updateTodoPatch(scope, todo, { important: !todo.important })} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>
-    <button className="icon-btn" onClick={() => updateTodoPatch(scope, todo, { hidden: !todo.hidden })}>{todo.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+    <button className="icon-btn" onClick={() => { onPatch(todo.id, { important: !todo.important }); void updateTodoPatch(scope, todo, { important: !todo.important }); }} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>
+    <button className="icon-btn" onClick={() => { onPatch(todo.id, { hidden: !todo.hidden }); void updateTodoPatch(scope, todo, { hidden: !todo.hidden }); }}>{todo.hidden ? <Lock size={13} /> : <Unlock size={13} />}</button>
     {editMode && <>
       <button className="icon-btn" onClick={editing ? save : () => setEditing(true)}>edit</button>
-      <button className="icon-btn" onClick={() => archiveTodo(scope, todo)}>✕</button>
+      <button className="icon-btn" onClick={() => { onPatch(todo.id, { status: "archived" }); void archiveTodo(scope, todo); }}>✕</button>
     </>}
   </div>
   {memoOpen ? (
@@ -771,7 +862,7 @@ function TodoRow({ todo, scope, color, editMode }: { todo: TodoItem; scope: Scop
       value={memo}
       onChange={(event) => { setMemo(event.target.value); void saveMemo(event.target.value); }}
       onBlur={() => { if (!memo) setMemoOpen(false); }}
-      onKeyDown={(event) => { if (event.key === "Escape" || (event.key === "Enter" && !event.shiftKey)) { event.preventDefault(); setMemoOpen(false); } }}
+      onKeyDown={(event) => { if (event.key === "Escape" || (event.key === "Enter" && !event.shiftKey && !isCoarsePointer())) { event.preventDefault(); setMemoOpen(false); } }}
       placeholder="메모를 입력하세요..."
       rows={2}
       style={{ display: "block", width: "100%", marginTop: ".2rem", paddingLeft: "1.5rem", border: "none", borderBottom: `1px solid ${color}44`, background: "transparent", resize: "none", fontFamily: "inherit", fontSize: ".78rem", lineHeight: 1.6, color: "#666", outline: "none" }}
@@ -858,13 +949,19 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const divider = { borderTop: `1px solid ${color}20`, margin: "1.25rem 0" };
   const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
+  function commitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey && !isCoarsePointer()) {
+      event.preventDefault();
+      event.currentTarget.blur();
+    }
+  }
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
       <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "#222" }}>{dateLabel}</h2>
       <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
     </div>
     <span style={label}>ᴍᴏʀɴɪɴɢ</span>
-    <textarea value={journal.morning ?? ""} onChange={(e) => updateJournal({ morning: e.target.value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요. (Enter 저장)" />
+    <textarea value={journal.morning ?? ""} onChange={(e) => updateJournal({ morning: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요. " />
     <div style={divider} />
     <span style={label}>ɢʀᴀᴛɪᴛᴜᴅᴇ</span>
     {[0, 1, 2].map((index) => (
@@ -874,18 +971,18 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
           const next = [...(daily.gratitude || ["", "", ""])];
           next[index] = e.target.value;
           updateDaily({ gratitude: next });
-        }} placeholder={`감사한 점 ${index + 1}`} rows={1} style={{ minHeight: "auto", resize: "none", flex: 1 }} />
+        }} onKeyDown={commitOnDesktopEnter} placeholder={`감사한 점 ${index + 1}`} rows={1} style={{ minHeight: "auto", resize: "none", flex: 1 }} />
       </div>
     ))}
     <div style={divider} />
     <span style={label}>ᴅɪᴀʀʏ</span>
-    <textarea value={daily.diary ?? ""} onChange={(e) => updateDaily({ diary: e.target.value })} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 적어주세요. " rows={6} />
+    <textarea value={daily.diary ?? ""} onChange={(e) => updateDaily({ diary: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 적어주세요. " rows={6} />
     <div style={divider} />
     <span style={label}>ᴍᴏᴏᴅ</span>
     <MoodPicker value={daily.mood || []} onChange={(mood) => updateDaily({ mood })} color={color} />
     <div style={divider} />
     <span style={label}>ᴅʀᴇᴀᴍ</span>
-    <textarea value={daily.dream ?? ""} onChange={(e) => updateDaily({ dream: e.target.value })} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.' " rows={4} style={{ fontStyle: "italic" }} />
+    <textarea value={daily.dream ?? ""} onChange={(e) => updateDaily({ dream: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.' " rows={4} style={{ fontStyle: "italic" }} />
     {printing && <NightlogCard dateLabel={dateLabel} journal={journal} daily={daily} color={color} texture={texture} />}
   </section>;
 }
@@ -974,9 +1071,12 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
 
 function SharedView({ uid, dateKey, color, pair }: { uid: string; dateKey: string; color: string; pair: Pair | null }) {
   const [shared, setShared] = useState<ReturnType<typeof Object> | null>(null);
+  const [partnerShared, setPartnerShared] = useState<ReturnType<typeof Object> | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  useEffect(() => subscribeSharedDay(uid, dateKey, (value) => setShared(value as never)), [uid, dateKey]);
+  const partnerUid = pair?.members.find((member) => member !== uid) || null;
+  useEffect(() => pair ? subscribePairSharedDay(pair.id, uid, dateKey, (value) => setShared(value as never)) : subscribeSharedDay(uid, dateKey, (value) => setShared(value as never)), [pair, uid, dateKey]);
+  useEffect(() => pair && partnerUid ? subscribePairSharedDay(pair.id, partnerUid, dateKey, (value) => setPartnerShared(value as never)) : undefined, [pair, partnerUid, dateKey]);
   useEffect(() => subscribeMessages(uid, dateKey, setMessages), [uid, dateKey]);
   async function send() {
     if (!input.trim()) return;
@@ -985,23 +1085,36 @@ function SharedView({ uid, dateKey, color, pair }: { uid: string; dateKey: strin
     await saveMessages(uid, dateKey, next);
   }
   if (!pair) return <section className="main-card empty-twin"><h2>아직 연결된 Twin이 없어요.</h2><p>왼쪽 패널에서 상대 ID로 연결 요청을 보낼 수 있습니다. 혼자 사용은 계속 가능합니다.</p></section>;
-  return <section className="main-card"><span className="micro-label">ᴛᴡɪɴ</span><div className="shared-card" style={{ borderColor: color }}><b>내 공유 카드</b><p>{shared ? "오늘 공유가 준비되었습니다." : "todo 탭에서 오늘 공유하기를 눌러주세요."}</p></div><div className="message-box">{messages.map((m) => <p key={m.time}>{m.text}</p>)}<div className="tiny-form"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="한마디" /><button onClick={send}>→</button></div></div></section>;
+  return <section className="main-card">
+    <span className="micro-label">ᴛᴡɪɴ</span>
+    <div className="shared-card" style={{ borderColor: color }}><b>내 공유 카드</b><p>{shared ? "오늘 공유가 준비되었습니다." : "todo 탭에서 Share를 눌러주세요."}</p></div>
+    <div className="shared-card" style={{ borderColor: `${color}55` }}><b>파트너 공유 카드</b><p>{partnerShared ? "파트너의 오늘 공유가 도착했습니다." : "아직 파트너 공유가 없습니다."}</p></div>
+    <div className="message-box">{messages.map((m) => <p key={m.time}>{m.text}</p>)}<div className="tiny-form"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="timestamp" /><button onClick={send}>→</button></div></div>
+  </section>;
 }
 
 function RoutineModal({ uid, routines, onClose }: { uid: string; routines: Routine[]; onClose: () => void }) {
   const [text, setText] = useState("");
   const [categoryKey, setCategoryKey] = useState<CategoryKey>("required");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
+  const [weekdays, setWeekdays] = useState<number[]>([new Date().getDay()]);
   async function add() {
     if (!text.trim()) return;
-    await addRoutine(uid, text, categoryKey, frequency, [new Date().getDay()]);
+    await addRoutine(uid, text, categoryKey, frequency, frequency === "daily" ? [0, 1, 2, 3, 4, 5, 6] : weekdays);
     setText("");
   }
-  return <div className="modal-backdrop" onClick={onClose}><section className="modal-card" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>루틴</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>{routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{r.categoryKey}</small></div>)}<input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="새 루틴" /><div className="button-row"><select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{DEFAULT_CATEGORIES[k]}</option>)}</select><select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select></div><button className="dark-btn" onClick={add}>추가</button></section></div>;
+  function toggleDay(day: number) {
+    setWeekdays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day].sort());
+  }
+  return <div className="modal-backdrop" onClick={onClose}><section className="modal-card routine-modal" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>루틴</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>
+    <div className="routine-list">{routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{DEFAULT_CATEGORIES[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>)}</div>
+    <input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="새 루틴" />
+    <div className="button-row"><select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{DEFAULT_CATEGORIES[k]}</option>)}</select><select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select></div>
+    {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
+    <button className="dark-btn" onClick={add}>추가</button></section></div>;
 }
 
-function MemoWidget() {
-  const [open, setOpen] = useState(false);
+function MemoWidget({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const [notes, setNotes] = useState<string[]>(() => JSON.parse(localStorage.getItem("stickies") || "[]"));
   const [input, setInput] = useState("");
   function add() {
@@ -1011,11 +1124,10 @@ function MemoWidget() {
     localStorage.setItem("stickies", JSON.stringify(next));
     setInput("");
   }
-  return <div className="memo-widget"><button onClick={() => setOpen((v) => !v)}>✎ ᴍᴇᴍᴏ</button>{open && <div className="widget-panel"><textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); add(); } }} placeholder="메모" /><button onClick={add}>추가</button>{notes.map((n, i) => <p key={`${n}-${i}`}>{n}</p>)}</div>}</div>;
+  return <div className={open ? "memo-widget widget-open" : "memo-widget"}><button onClick={onToggle}>✎ ᴍᴇᴍᴏ</button>{open && <div className="widget-panel"><textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); add(); } }} placeholder="메모" /><button onClick={add}>추가</button>{notes.map((n, i) => <p key={`${n}-${i}`}>{n}</p>)}</div>}</div>;
 }
 
-function MusicWidget({ userId, color }: { userId: string; color: string }) {
-  const [open, setOpen] = useState(false);
+function MusicWidget({ userId, color, open, onToggle }: { userId: string; color: string; open: boolean; onToggle: () => void }) {
   const [input, setInput] = useState("");
   const [urlBar, setUrlBar] = useState(false);
   const [tracks, setTracks] = useState<string[]>(() => JSON.parse(localStorage.getItem(`ytplaylist_${userId}`) || "[]"));
@@ -1037,8 +1149,8 @@ function MusicWidget({ userId, color }: { userId: string; color: string }) {
     setCurrent((value) => value >= next.length ? Math.max(0, next.length - 1) : value);
   }
   const currentEmbed = tracks[current];
-  return <div className="music-widget">
-    <button onClick={() => setOpen((v) => !v)}>
+  return <div className={open ? "music-widget widget-open" : "music-widget"}>
+    <button onClick={onToggle}>
       <span style={{ fontSize: "12px", color: currentEmbed ? color : "#ccc" }}>♪</span>
       <span style={{ fontSize: "10px", color: "#bbb", letterSpacing: ".1em" }}>ᴍᴜsɪᴄ</span>
     </button>
@@ -1051,11 +1163,10 @@ function MusicWidget({ userId, color }: { userId: string; color: string }) {
   </div>;
 }
 
-function WeatherWidget({ color }: { color: string }) {
+function WeatherWidget({ color, open, onToggle }: { color: string; open: boolean; onToggle: () => void }) {
   const [weather, setWeather] = useState<{ temperature: number; windspeed: number; weathercode: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [open, setOpen] = useState(false);
 
   function wmoEmoji(code: number) {
     if (code === 0) return "☀";
@@ -1101,8 +1212,8 @@ function WeatherWidget({ color }: { color: string }) {
   const emoji = loading ? "…" : error ? "?" : wmoEmoji(weather?.weathercode ?? 0);
   const temp = weather ? `${Math.round(weather.temperature)}°` : "";
 
-  return <div className="weather-widget">
-    <button onClick={() => setOpen((v) => !v)}>
+  return <div className={open ? "weather-widget widget-open" : "weather-widget"}>
+    <button onClick={onToggle}>
       <span>{emoji}</span>
       <b style={{ color: weather ? color : "#ccc" }}>{temp || "날씨"}</b>
     </button>
@@ -1115,18 +1226,40 @@ function WeatherWidget({ color }: { color: string }) {
   </div>;
 }
 
-function PomodoroWidget({ color }: { color: string }) {
-  const [open, setOpen] = useState(false);
+function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolean; onToggle: () => void }) {
   const [running, setRunning] = useState(false);
-  const [left, setLeft] = useState(25 * 60);
+  const [mode, setMode] = useState<"focus" | "short" | "long">("focus");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [minutes, setMinutes] = useState(() => {
+    const saved = localStorage.getItem("pomoMinutes");
+    return saved ? JSON.parse(saved) as Record<"focus" | "short" | "long", number> : { focus: 25, short: 5, long: 15 };
+  });
+  const [left, setLeft] = useState(minutes.focus * 60);
   useEffect(() => {
     if (!running) return undefined;
     const id = window.setInterval(() => setLeft((v) => Math.max(0, v - 1)), 1000);
     return () => window.clearInterval(id);
   }, [running]);
+  function selectMode(next: "focus" | "short" | "long") {
+    setMode(next);
+    setRunning(false);
+    setLeft(minutes[next] * 60);
+  }
+  function updateMinutes(key: "focus" | "short" | "long", value: string) {
+    const nextValue = Math.max(1, Math.min(120, Number.parseInt(value, 10) || 1));
+    const next = { ...minutes, [key]: nextValue };
+    setMinutes(next);
+    localStorage.setItem("pomoMinutes", JSON.stringify(next));
+    if (key === mode && !running) setLeft(nextValue * 60);
+  }
   const mm = Math.floor(left / 60).toString().padStart(2, "0");
   const ss = (left % 60).toString().padStart(2, "0");
-  return <div className="pomo-widget"><button onClick={() => setOpen((v) => !v)}>◷</button>{open && <div className="widget-panel"><b>{mm}:{ss}</b><div className="button-row"><button style={{ background: color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => setLeft(25 * 60)}><RotateCcw size={14} /></button></div></div>}</div>;
+  return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button onClick={onToggle}>◷</button>{open && <div className="widget-panel pomo-panel">
+    <div className="pomo-modes">{(["focus", "short", "long"] as const).map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => selectMode(item)}>{item}</button>)}</div>
+    <b>{mm}:{ss}</b>
+    <div className="button-row"><button style={{ background: color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
+    {settingsOpen && <div className="pomo-settings">{(["focus", "short", "long"] as const).map((item) => <label key={item}><span>{item}</span><input value={minutes[item]} onChange={(event) => updateMinutes(item, event.target.value)} /></label>)}</div>}
+  </div>}</div>;
 }
 
 function DemianWidget() {

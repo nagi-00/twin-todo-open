@@ -123,6 +123,21 @@ export async function saveSharedDay(uid: string, date: string, shared: SharedDay
   }, { merge: true });
 }
 
+export function subscribePairSharedDay(pairId: string, uid: string, date: string, callback: (shared: SharedDay | null) => void) {
+  return onSnapshot(doc(requireDb(), "pairs", pairId, "shared", `${uid}_${date}`), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data() as SharedDay : null);
+  });
+}
+
+export async function savePairSharedDay(pairId: string, uid: string, date: string, shared: SharedDay) {
+  await setDoc(doc(requireDb(), "pairs", pairId, "shared", `${uid}_${date}`), {
+    ...shared,
+    uid,
+    date,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
 export function subscribeRoutines(uid: string, callback: (routines: Routine[]) => void) {
   const q = query(collection(requireDb(), "users", uid, "routines"), orderBy("createdAt", "asc"));
   return onSnapshot(q, (snapshot) => {
