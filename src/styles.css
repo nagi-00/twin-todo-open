@@ -718,6 +718,11 @@ select {
   font-weight: 650;
 }
 
+.note-box,
+.note-view {
+  font-size: calc(0.84rem + 1px);
+}
+
 .editable-view span,
 .note-view span {
   color: var(--muted-3);
