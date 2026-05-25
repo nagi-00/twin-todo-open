@@ -29,6 +29,8 @@ export type SharedDay = {
   note: string;
   color: string;
   labels?: CategoryLabels;
+  authorName?: string;
+  authorNickname?: string | null;
   messages: Message[];
   updatedAt?: unknown;
 };

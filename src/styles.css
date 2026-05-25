@@ -43,6 +43,10 @@ body {
   min-height: 100vh;
 }
 
+html[data-font="maruminya"] {
+  font-size: 15px;
+}
+
 button,
 input,
 textarea,
@@ -773,6 +777,15 @@ select {
   color: #aaa;
   font-size: 0.68rem;
   line-height: 1.45;
+}
+
+.shared-todo.private {
+  color: #ccc;
+  font-style: italic;
+}
+
+.shared-todo.private > span {
+  color: #ddd;
 }
 
 .shared-section {

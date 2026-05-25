@@ -307,6 +307,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   useEffect(() => {
     const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
     document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
+    document.documentElement.dataset.font = found.key;
     localStorage.setItem("twintodoFont", found.key);
   }, [fontKey]);
 
@@ -354,7 +355,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
           ))}
         </div>
 
-        {tab === "todo" && <TodoView scope={scope} uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
+        {tab === "todo" && <TodoView scope={scope} uid={user.uid} profile={profile} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "journal" && <JournalView uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
         {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} dateKey={dateKey} color={color} pair={pair} />}
@@ -674,7 +675,7 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
   );
 }
 
-function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; uid: string; selectedDate: Date; dateKey: string; color: string }) {
+function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope: Scope; uid: string; profile: UserProfile; selectedDate: Date; dateKey: string; color: string }) {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [optimisticTodos, setOptimisticTodos] = useState<TodoItem[]>([]);
   const [labels, setLabels] = useState<CategoryLabels>(DEFAULT_CATEGORIES);
@@ -796,7 +797,7 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
 
   async function shareToday() {
     try {
-      const payload = { todos: visible.filter((todo) => !todo.hidden), note, color, labels, messages, updatedAt: null };
+      const payload = { todos: visible, note, color, labels, authorName: profile.displayName, authorNickname: profile.nickname, messages, updatedAt: null };
       await saveSharedDay(uid, dateKey, payload);
       if (scope.type === "pair") await savePairSharedDay(scope.pairId, uid, dateKey, payload);
       alert("오늘의 공유 카드가 업데이트되었습니다.");
@@ -1275,14 +1276,17 @@ function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; d
     );
   }
 
-  const myTodos = ((shared?.todos || []) as TodoItem[]).filter((todo) => !todo.hidden && todo.status !== "archived");
-  const partnerTodos = ((partnerShared?.todos || []) as TodoItem[]).filter((todo) => !todo.hidden && todo.status !== "archived");
+  const myTodos = ((shared?.todos || []) as TodoItem[]).filter((todo) => todo.status !== "archived");
+  const partnerTodos = ((partnerShared?.todos || []) as TodoItem[]).filter((todo) => todo.status !== "archived");
+  const myVisibleTodos = myTodos.filter((todo) => !todo.hidden);
+  const partnerVisibleTodos = partnerTodos.filter((todo) => !todo.hidden);
   const partnerColor = partnerShared?.color || "#888";
+  const partnerName = partnerShared?.authorName || partnerShared?.authorNickname || (partnerUid ? pair.memberNicknames?.[partnerUid] : undefined) || "Twin";
   const myLabels = shared?.labels || DEFAULT_CATEGORIES;
   const partnerLabels = partnerShared?.labels || DEFAULT_CATEGORIES;
   const timeline = [
     ...(shared?.messages || []).map((message) => ({ ...message, owner: displayName || "나", color })),
-    ...(partnerShared?.messages || []).map((message) => ({ ...message, owner: "Twin", color: partnerColor })),
+    ...(partnerShared?.messages || []).map((message) => ({ ...message, owner: partnerName, color: partnerColor })),
   ].sort((a, b) => a.time - b.time);
   const dateLabel = new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
@@ -1291,7 +1295,7 @@ function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; d
       <h2 className="shared-date">{dateLabel}</h2>
       <div className="shared-grid">
         <UserSharedCard user={{ name: displayName || "나", color, isSelf: true }} todos={myTodos} note={shared?.note || ""} labels={myLabels} notShared={!shared} />
-        <UserSharedCard user={{ name: "Twin", color: partnerColor }} todos={partnerTodos} note={partnerShared?.note || ""} labels={partnerLabels} notShared={!partnerShared} />
+        <UserSharedCard user={{ name: partnerName, color: partnerColor }} todos={partnerTodos} note={partnerShared?.note || ""} labels={partnerLabels} notShared={!partnerShared} />
       </div>
 
       <section className="shared-section">
@@ -1310,8 +1314,8 @@ function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; d
       <section className="shared-section">
         <h3>achievement</h3>
         <div className="shared-progress-list">
-          <SharedProgress name={displayName || "나" } color={color} todos={myTodos} />
-          <SharedProgress name="Twin" color={partnerColor} todos={partnerTodos} />
+          <SharedProgress name={displayName || "나" } color={color} todos={myVisibleTodos} />
+          <SharedProgress name={partnerName} color={partnerColor} todos={partnerVisibleTodos} />
         </div>
       </section>
     </section>
@@ -1343,11 +1347,11 @@ function UserSharedCard({ user, todos, note, labels, notShared }: { user: { name
               <div className="shared-category" key={key}>
                 <span style={{ color: user.color }}>{labels[key]}</span>
                 {items.map((todo) => (
-                  <div className="shared-todo" key={todo.id}>
+                  <div className={`shared-todo ${todo.hidden ? "private" : ""}`} key={todo.id}>
                     <span>{BULLETS[todo.state ?? 0]}</span>
-                    <p>{todo.title}</p>
-                    {todo.important && <b style={{ color: user.color }}>★</b>}
-                    {todo.memo && <small>{todo.memo}</small>}
+                    <p>{todo.hidden ? "비공개 일정입니다." : todo.title}</p>
+                    {todo.important && !todo.hidden && <b style={{ color: user.color }}>★</b>}
+                    {todo.memo && !todo.hidden && <small>{todo.memo}</small>}
                   </div>
                 ))}
               </div>

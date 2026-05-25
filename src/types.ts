@@ -58,6 +58,7 @@ export type Pair = {
   id: string;
   members: string[];
   memberMap: Record<string, boolean>;
+  memberNicknames?: Record<string, string>;
   status: "active" | "blocked" | "deleted";
   createdAt?: unknown;
   updatedAt?: unknown;

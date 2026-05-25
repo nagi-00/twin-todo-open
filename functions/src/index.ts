@@ -59,7 +59,7 @@ function buildPairKey(uidA: string, uidB: string) {
   return [uidA, uidB].sort().join("__");
 }
 
-function activePairPatch(uidA: string, uidB: string) {
+function activePairPatch(uidA: string, uidB: string, nicknames?: Record<string, string | null>) {
   return {
     members: [uidA, uidB],
     pairKey: buildPairKey(uidA, uidB),
@@ -67,13 +67,18 @@ function activePairPatch(uidA: string, uidB: string) {
       [uidA]: true,
       [uidB]: true,
     },
+    memberNicknames: {
+      [uidA]: nicknames?.[uidA] ?? "",
+      [uidB]: nicknames?.[uidB] ?? "",
+    },
     status: "active",
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
 
 async function ensurePairReadable(pairRef: DocumentReference, uidA: string, uidB: string) {
-  await pairRef.set(activePairPatch(uidA, uidB), { merge: true });
+  const [nicknameA, nicknameB] = await Promise.all([getUserNickname(uidA), getUserNickname(uidB)]);
+  await pairRef.set(activePairPatch(uidA, uidB, { [uidA]: nicknameA, [uidB]: nicknameB }), { merge: true });
   await pairRef.collection("settings").doc("categories").set({
     required: "필연",
     growth: "성장",
@@ -226,7 +231,10 @@ export const acceptPairRequest = onCall(callableOptions, async (request) => {
 
     const pairRef = db.collection("pairs").doc();
     tx.set(pairRef, {
-      ...activePairPatch(data.fromUid, data.toUid),
+      ...activePairPatch(data.fromUid, data.toUid, {
+        [data.fromUid]: data.fromNickname ?? "",
+        [data.toUid]: data.toNickname ?? "",
+      }),
       createdAt: FieldValue.serverTimestamp(),
     });
     tx.update(requestRef, {
