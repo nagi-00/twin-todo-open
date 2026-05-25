@@ -1406,20 +1406,21 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
 function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKey, color, pair }: { uid: string; displayName: string; partnerName: string; dateKey: string; color: string; pair: Pair | null }) {
   const [shared, setShared] = useState<SharedDay | null>(null);
   const [partnerShared, setPartnerShared] = useState<SharedDay | null>(null);
+  const pairId = pair?.id || null;
   const partnerUid = pair?.members.find((member) => member !== uid) || null;
   useEffect(() => {
-    setPartnerShared(null);
-    return pair
-      ? subscribePairSharedDay(pair.id, uid, dateKey, (value) => setShared(value))
+    setShared(null);
+    return pairId
+      ? subscribePairSharedDay(pairId, uid, dateKey, (value) => setShared(value))
       : subscribeSharedDay(uid, dateKey, (value) => setShared(value));
-  }, [pair, uid, dateKey]);
+  }, [pairId, uid, dateKey]);
   useEffect(() => {
-    if (!pair || !partnerUid) {
-      setPartnerShared(null);
+    setPartnerShared(null);
+    if (!pairId || !partnerUid) {
       return undefined;
     }
-    return subscribePairSharedDay(pair.id, partnerUid, dateKey, (value) => setPartnerShared(value));
-  }, [pair, partnerUid, dateKey]);
+    return subscribePairSharedDay(pairId, partnerUid, dateKey, (value) => setPartnerShared(value));
+  }, [pairId, partnerUid, dateKey]);
 
   if (!pair) {
     return (
