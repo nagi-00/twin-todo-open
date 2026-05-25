@@ -129,7 +129,7 @@ select {
 }
 
 .main > * {
-  max-width: 42rem;
+  max-width: 40rem;
   margin-left: auto;
   margin-right: auto;
 }
@@ -287,56 +287,12 @@ select {
   margin-bottom: 0.75rem;
 }
 
-.date-card,
 .main-card,
 .modal-card,
 .widget-panel {
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.07);
-}
-
-.date-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1.05rem 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.date-card h2 {
-  font-size: 1.02rem;
-  line-height: 1.45;
-  margin-bottom: 0.2rem;
-}
-
-.date-card span {
-  color: #bbb;
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.date-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.date-actions .icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #f6f6f6;
-}
-
-.date-actions input[type="color"] {
-  width: 1.35rem;
-  height: 1.35rem;
-  border: none;
-  padding: 0;
-  background: transparent;
 }
 
 .main-card {
@@ -611,6 +567,7 @@ select {
 }
 
 .memo-widget,
+.weather-widget,
 .music-widget,
 .pomo-widget,
 .demian-widget {
@@ -628,9 +585,14 @@ select {
   bottom: 20px;
 }
 
+.weather-widget {
+  left: 20px;
+  bottom: 116px;
+}
+
 .pomo-widget {
-  right: 84px;
-  bottom: 20px;
+  left: 20px;
+  bottom: 68px;
 }
 
 .demian-widget {
@@ -639,6 +601,7 @@ select {
 }
 
 .memo-widget > button,
+.weather-widget > button,
 .music-widget > button,
 .pomo-widget > button {
   display: flex;
@@ -651,6 +614,50 @@ select {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   font-family: inherit;
   color: #bbb;
+}
+
+.weather-widget > button span {
+  font-size: 12px;
+}
+
+.weather-widget > button b {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-panel {
+  position: absolute;
+  bottom: 42px;
+  left: 0;
+  width: 160px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
+  border: 1px solid #f0f0f0;
+  padding: 14px 16px 12px;
+}
+
+.weather-panel div {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.weather-panel strong {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.weather-panel p {
+  font-size: 0.72rem;
+  color: #999;
+  margin-top: 2px;
+}
+
+.weather-panel small {
+  font-size: 0.65rem;
+  color: #ccc;
+  margin-top: 3px;
 }
 
 .demian-widget > button {
@@ -955,16 +962,12 @@ select {
     padding-top: 3.4rem;
   }
 
-  .date-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .todo-input-grid {
     grid-template-columns: 1fr;
   }
 
   .memo-widget,
+  .weather-widget,
   .music-widget,
   .pomo-widget,
   .demian-widget {

@@ -45,6 +45,8 @@ export async function addTodo(scope: TodoScope, date: string, categoryKey: Categ
     status: "open" satisfies TodoStatus,
     state: 0 satisfies TodoState,
     hidden: false,
+    important: false,
+    memo: "",
     date,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -59,6 +61,8 @@ export async function updateTodoStatus(scope: TodoScope, todo: TodoItem, status:
     status,
     state: status === "done" ? 1 : 0,
     hidden: todo.hidden ?? false,
+    important: todo.important ?? false,
+    memo: todo.memo ?? "",
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -72,6 +76,8 @@ export async function updateTodoTitle(scope: TodoScope, todo: TodoItem, title: s
     status: todo.status,
     state: todo.state ?? 0,
     hidden: todo.hidden ?? false,
+    important: todo.important ?? false,
+    memo: todo.memo ?? "",
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -89,6 +95,8 @@ export async function updateTodoPatch(scope: TodoScope, todo: TodoItem, patch: P
     status: patch.status ?? todo.status,
     state: patch.state ?? todo.state ?? 0,
     hidden: patch.hidden ?? todo.hidden ?? false,
+    important: patch.important ?? todo.important ?? false,
+    memo: patch.memo ?? todo.memo ?? "",
     date: todo.date,
     updatedAt: serverTimestamp(),
   });

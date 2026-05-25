@@ -24,6 +24,8 @@ export type TodoItem = {
   status: TodoStatus;
   state?: TodoState;
   hidden?: boolean;
+  important?: boolean;
+  memo?: string;
   date: string;
   createdAt?: unknown;
   updatedAt?: unknown;
