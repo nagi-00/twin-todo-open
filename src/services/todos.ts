@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import type { CategoryKey, TodoItem, TodoStatus } from "../types";
+import type { CategoryKey, TodoItem, TodoState, TodoStatus } from "../types";
 
 type TodoScope =
   | { type: "solo"; uid: string }
@@ -43,6 +43,8 @@ export async function addTodo(scope: TodoScope, date: string, categoryKey: Categ
     categoryKey,
     title: title.trim(),
     status: "open" satisfies TodoStatus,
+    state: 0 satisfies TodoState,
+    hidden: false,
     date,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -55,6 +57,8 @@ export async function updateTodoStatus(scope: TodoScope, todo: TodoItem, status:
     categoryKey: todo.categoryKey,
     title: todo.title,
     status,
+    state: status === "done" ? 1 : 0,
+    hidden: todo.hidden ?? false,
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -66,6 +70,8 @@ export async function updateTodoTitle(scope: TodoScope, todo: TodoItem, title: s
     categoryKey: todo.categoryKey,
     title: title.trim(),
     status: todo.status,
+    state: todo.state ?? 0,
+    hidden: todo.hidden ?? false,
     date: todo.date,
     updatedAt: serverTimestamp(),
   });
@@ -73,6 +79,19 @@ export async function updateTodoTitle(scope: TodoScope, todo: TodoItem, title: s
 
 export async function archiveTodo(scope: TodoScope, todo: TodoItem) {
   await updateTodoStatus(scope, todo, "archived");
+}
+
+export async function updateTodoPatch(scope: TodoScope, todo: TodoItem, patch: Partial<TodoItem>) {
+  await updateDoc(todoDoc(scope, todo.id), {
+    ownerUid: todo.ownerUid,
+    categoryKey: patch.categoryKey ?? todo.categoryKey,
+    title: patch.title ?? todo.title,
+    status: patch.status ?? todo.status,
+    state: patch.state ?? todo.state ?? 0,
+    hidden: patch.hidden ?? todo.hidden ?? false,
+    date: todo.date,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function deleteRoutineUnsafe(scope: TodoScope, id: string) {

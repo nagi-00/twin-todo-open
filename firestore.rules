@@ -59,14 +59,18 @@ service cloud.firestore {
       return request.resource.data.ownerUid == ownerUid
         && validCategoryKey(request.resource.data.categoryKey)
         && validTodoTitle(request.resource.data.title)
-        && request.resource.data.status == "open";
+        && request.resource.data.status == "open"
+        && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
+        && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool);
     }
 
     function validTodoUpdate() {
       return request.resource.data.ownerUid == resource.data.ownerUid
         && validCategoryKey(request.resource.data.categoryKey)
         && validTodoTitle(request.resource.data.title)
-        && validTodoStatus(request.resource.data.status);
+        && validTodoStatus(request.resource.data.status)
+        && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
+        && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool);
     }
 
     match /users/{uid} {
@@ -131,6 +135,21 @@ service cloud.firestore {
       match /dateColors/{date} {
         allow read, create, update: if isSelf(uid);
         allow delete: if isSelf(uid);
+      }
+
+      match /messages/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /daily/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /shared/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
       }
     }
 

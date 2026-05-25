@@ -1,5 +1,6 @@
 export type CategoryKey = "required" | "growth" | "freedom";
 export type TodoStatus = "open" | "done" | "archived";
+export type TodoState = 0 | 1 | 2;
 
 export type CategoryLabels = Record<CategoryKey, string>;
 
@@ -21,6 +22,8 @@ export type TodoItem = {
   categoryKey: CategoryKey;
   title: string;
   status: TodoStatus;
+  state?: TodoState;
+  hidden?: boolean;
   date: string;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -30,8 +33,10 @@ export type Routine = {
   id: string;
   text: string;
   categoryKey: CategoryKey;
-  frequency: "daily" | "weekly";
+  frequency?: "daily" | "weekly";
+  freq?: "daily" | "weekly";
   weekdays: number[];
+  weekday?: number;
   createdAt?: unknown;
 };
 

@@ -62,3 +62,8 @@ export async function uploadAvatar(uid: string, file: File) {
   });
   return getDownloadURL(avatarRef);
 }
+
+export async function getAvatarUrl(path: string | null) {
+  if (!storage || !path) return null;
+  return getDownloadURL(ref(storage, path));
+}
