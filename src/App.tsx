@@ -48,6 +48,7 @@ import type { CategoryKey, CategoryLabels, Pair, PairRequest, Routine, TodoItem,
 
 type Scope = { type: "solo"; uid: string } | { type: "pair"; pairId: string; uid: string };
 type TabKey = "todo" | "journal" | "week" | "shared";
+type MusicTrack = { url: string; title: string };
 
 const ADMIN_EMAIL = "mx.gin.xo@gmail.com";
 const BULLETS = ["☐", "☑", "☒"] as const;
@@ -147,6 +148,17 @@ function ytEmbed(raw: string) {
     return null;
   } catch {
     return null;
+  }
+}
+
+async function getYoutubeTitle(raw: string) {
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(raw.trim())}&format=json`);
+    if (!res.ok) throw new Error("title fetch failed");
+    const data = await res.json() as { title?: string };
+    return data.title?.trim() || "YouTube video";
+  } catch {
+    return "YouTube video";
   }
 }
 
@@ -281,7 +293,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeWidget, setActiveWidget] = useState<null | "memo" | "weather" | "music" | "pomo">(null);
+  const [activeWidget, setActiveWidget] = useState<null | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
@@ -343,7 +355,6 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
         {tab === "shared" && <SharedView uid={user.uid} dateKey={dateKey} color={color} pair={pair} />}
       </main>
-      <MemoWidget open={activeWidget === "memo"} onToggle={() => setActiveWidget((value) => value === "memo" ? null : "memo")} />
       <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
       <MusicWidget userId={user.uid} color={color} open={activeWidget === "music"} onToggle={() => setActiveWidget((value) => value === "music" ? null : "music")} />
       <PomodoroWidget color={color} open={activeWidget === "pomo"} onToggle={() => setActiveWidget((value) => value === "pomo" ? null : "pomo")} />
@@ -821,7 +832,17 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
           </div>
         </div>
       )}
-      <textarea className="note-box" value={note} onChange={(event) => { setNote(event.target.value); void saveTextDoc(["users", uid, "notes", dateKey], "text", event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !isComposing(event)) { event.preventDefault(); event.currentTarget.blur(); } }} placeholder="오늘의 한마디" />
+      <EditableBlock
+        className="note-box"
+        viewClassName="note-view"
+        value={note}
+        onChange={(value) => {
+          setNote(value);
+          void saveTextDoc(["users", uid, "notes", dateKey], "text", value);
+        }}
+        placeholder="오늘의 한마디"
+        rows={3}
+      />
       <div className="todo-input-grid">
         {CATEGORY_ORDER.map((key) => (
           <div className="todo-input-card" key={key}>
@@ -1021,6 +1042,57 @@ function PrintSectionHeader({ label, color }: { label: string; color: string }) 
   </div>;
 }
 
+function EditableBlock({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  className,
+  viewClassName,
+  textareaStyle,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  rows?: number;
+  className?: string;
+  viewClassName?: string;
+  textareaStyle?: CSSProperties;
+}) {
+  const [editing, setEditing] = useState(!value.trim());
+
+  useEffect(() => {
+    if (!value.trim()) setEditing(true);
+  }, [value]);
+
+  if (!editing) {
+    return (
+      <div className={viewClassName || "editable-view"} onDoubleClick={() => setEditing(true)}>
+        {value.trim() ? value : <span>{placeholder}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <textarea
+      className={className}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && event.shiftKey && !isComposing(event)) {
+          event.preventDefault();
+          setEditing(false);
+          event.currentTarget.blur();
+        }
+      }}
+      placeholder={placeholder}
+      rows={rows}
+      style={textareaStyle}
+      autoFocus
+    />
+  );
+}
+
 function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selectedDate: Date; dateKey: string; color: string }) {
   const [journal, setJournal] = useState<JournalEntry>({});
   const [daily, setDaily] = useState<DailyEntry>({});
@@ -1048,40 +1120,34 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const divider = { borderTop: `1px solid ${color}20`, margin: "1.25rem 0" };
   const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
-  function commitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey && !isComposing(event)) {
-      event.preventDefault();
-      event.currentTarget.blur();
-    }
-  }
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
       <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "#222" }}>{dateLabel}</h2>
       <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print!</button>
     </div>
     <span style={label}>ᴍᴏʀɴɪɴɢ</span>
-    <textarea value={journal.morning ?? ""} onChange={(e) => updateJournal({ morning: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요. " />
+    <EditableBlock value={journal.morning ?? ""} onChange={(value) => updateJournal({ morning: value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 적어주세요." />
     <div style={divider} />
     <span style={label}>ɢʀᴀᴛɪᴛᴜᴅᴇ</span>
     {[0, 1, 2].map((index) => (
       <div key={index} style={{ display: "flex", alignItems: "center", gap: ".35rem", marginBottom: ".35rem" }}>
         <span style={{ fontSize: ".62rem", color, flexShrink: 0, fontFamily: "monospace", width: ".8rem", textAlign: "right" }}>{index + 1}.</span>
-        <textarea value={(daily.gratitude || [])[index] || ""} onChange={(e) => {
+        <EditableBlock value={(daily.gratitude || [])[index] || ""} onChange={(value) => {
           const next = [...(daily.gratitude || ["", "", ""])];
-          next[index] = e.target.value;
+          next[index] = value;
           updateDaily({ gratitude: next });
-        }} onKeyDown={commitOnDesktopEnter} placeholder={`감사한 점 ${index + 1}`} rows={1} style={{ minHeight: "auto", resize: "none", flex: 1 }} />
+        }} placeholder={`감사한 점 ${index + 1}`} rows={1} textareaStyle={{ minHeight: "auto", resize: "none", flex: 1 }} />
       </div>
     ))}
     <div style={divider} />
     <span style={label}>ᴅɪᴀʀʏ</span>
-    <textarea value={daily.diary ?? ""} onChange={(e) => updateDaily({ diary: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 적어주세요. " rows={6} />
+    <EditableBlock value={daily.diary ?? ""} onChange={(value) => updateDaily({ diary: value })} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 적어주세요." rows={6} />
     <div style={divider} />
     <span style={label}>ᴍᴏᴏᴅ</span>
     <MoodPicker value={daily.mood || []} onChange={(mood) => updateDaily({ mood })} color={color} />
     <div style={divider} />
     <span style={label}>ᴅʀᴇᴀᴍ</span>
-    <textarea value={daily.dream ?? ""} onChange={(e) => updateDaily({ dream: e.target.value })} onKeyDown={commitOnDesktopEnter} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.' " rows={4} style={{ fontStyle: "italic" }} />
+    <EditableBlock value={daily.dream ?? ""} onChange={(value) => updateDaily({ dream: value })} placeholder="이루고 싶은 미래를 현재형으로 적어주세요. '나는 이미 ___이다.'" rows={4} textareaStyle={{ fontStyle: "italic" }} />
     {printing && <NightlogCard dateLabel={dateLabel} journal={journal} daily={daily} color={color} texture={texture} />}
   </section>;
 }
@@ -1222,28 +1288,19 @@ function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels:
   </section></div>;
 }
 
-function MemoWidget({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const [notes, setNotes] = useState<string[]>(() => JSON.parse(localStorage.getItem("stickies") || "[]"));
-  const [input, setInput] = useState("");
-  function add() {
-    if (!input.trim()) return;
-    const next = [input.trim(), ...notes];
-    setNotes(next);
-    localStorage.setItem("stickies", JSON.stringify(next));
-    setInput("");
-  }
-  return <div className={open ? "memo-widget widget-open" : "memo-widget"}><button onClick={onToggle}>✎ ᴍᴇᴍᴏ</button>{open && <div className="widget-panel"><textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); add(); } }} placeholder="메모" /><button onClick={add}>추가</button>{notes.map((n, i) => <p key={`${n}-${i}`}>{n}</p>)}</div>}</div>;
-}
-
 function MusicWidget({ userId, color, open, onToggle }: { userId: string; color: string; open: boolean; onToggle: () => void }) {
   const [input, setInput] = useState("");
   const [urlBar, setUrlBar] = useState(false);
-  const [tracks, setTracks] = useState<string[]>(() => JSON.parse(localStorage.getItem(`ytplaylist_${userId}`) || "[]"));
+  const [tracks, setTracks] = useState<MusicTrack[]>(() => {
+    const saved = JSON.parse(localStorage.getItem(`ytplaylist_${userId}`) || "[]") as Array<string | MusicTrack>;
+    return saved.map((track, index) => typeof track === "string" ? { url: track, title: `YouTube video ${index + 1}` } : track);
+  });
   const [current, setCurrent] = useState(0);
-  function add() {
+  async function add() {
     const embed = ytEmbed(input);
     if (!embed) return;
-    const next = [...tracks, embed];
+    const title = await getYoutubeTitle(input);
+    const next = [...tracks, { url: embed, title }];
     setTracks(next);
     localStorage.setItem(`ytplaylist_${userId}`, JSON.stringify(next));
     setCurrent(next.length - 1);
@@ -1264,9 +1321,9 @@ function MusicWidget({ userId, color, open, onToggle }: { userId: string; color:
     </button>
     <div className="music-panel" style={{ left: open ? 0 : "-9999px" }}>
       <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
-      {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="YouTube URL (영상·플레이리스트 모두 가능)" /><button onClick={add} style={{ background: color }}>→</button></div>}
-      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b>Track {i + 1}</b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.<br />음악도, 플레이리스트도 가능합니다.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
-      {currentEmbed && <iframe src={currentEmbed} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
+      {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="YouTube 영상 URL" /><button onClick={() => void add()} style={{ background: color }}>→</button></div>}
+      {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b>{track.title}</b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요.</p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
+      {currentEmbed && <iframe src={currentEmbed.url} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
     </div>
   </div>;
 }

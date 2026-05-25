@@ -426,6 +426,31 @@ select {
   color: inherit;
 }
 
+.editable-view,
+.note-view {
+  width: 100%;
+  min-height: 2.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.48rem 0.58rem;
+  color: #555;
+  font-size: 0.84rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  cursor: text;
+}
+
+.note-view {
+  margin-bottom: 1rem;
+  background: #fafafa;
+  border-color: #f2f2f2;
+}
+
+.editable-view span,
+.note-view span {
+  color: #c8c8c8;
+}
+
 .todo-input-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -896,7 +921,6 @@ select {
   margin-top: 0.8rem;
 }
 
-.memo-widget,
 .weather-widget,
 .music-widget,
 .pomo-widget,
@@ -907,11 +931,6 @@ select {
 
 .widget-open {
   z-index: 1600;
-}
-
-.memo-widget {
-  top: 1rem;
-  right: 1rem;
 }
 
 .music-widget {
@@ -934,7 +953,6 @@ select {
   bottom: 20px;
 }
 
-.memo-widget > button,
 .weather-widget > button,
 .music-widget > button,
 .pomo-widget > button {
@@ -1030,10 +1048,6 @@ select {
   width: 270px;
   padding: 0.8rem;
   margin-top: 0.4rem;
-}
-
-.memo-widget .widget-panel {
-  right: 0;
 }
 
 .pomo-widget .widget-panel,
@@ -1639,7 +1653,6 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .memo-widget,
   .weather-widget,
   .music-widget,
   .pomo-widget,
