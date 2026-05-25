@@ -52,10 +52,22 @@ Windows PowerShell:
 Copy-Item .env.example .env.local
 ```
 
-`.firebaserc.example`을 `.firebaserc`로 복사하고 프로젝트 ID를 넣는다.
+이 저장소는 기본 Firebase 프로젝트를 `twintodo-open`으로 사용한다. `.firebaserc`가 없다면 `.firebaserc.example`을 `.firebaserc`로 복사한다.
 
 ```powershell
 Copy-Item .firebaserc.example .firebaserc
+```
+
+배포 전에는 항상 CLI가 올바른 프로젝트를 보고 있는지 확인한다.
+
+```powershell
+firebase use
+```
+
+출력이 `twintodo-open`이 아니면 아래 명령으로 바꾼다.
+
+```powershell
+firebase use twintodo-open
 ```
 
 ## 7) GitHub Deployment
