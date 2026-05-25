@@ -46,6 +46,12 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "HJSS";
+  src: url("/fonts/hjss.ttf") format("truetype");
+  font-display: swap;
+}
+
 *,
 *::before,
 *::after {
@@ -469,6 +475,16 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+}
+
+.admin-font-fixed {
+  width: 100%;
+  border: 1px solid;
+  border-radius: 9999px;
+  padding: 0.42rem 0.7rem;
+  text-align: center;
+  font-family: "HJSS", var(--ui-font);
+  font-size: 0.78rem;
 }
 
 .theme-toggle {

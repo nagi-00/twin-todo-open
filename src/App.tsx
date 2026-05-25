@@ -53,7 +53,7 @@ type Scope = { type: "solo"; uid: string } | { type: "pair"; pairId: string; uid
 type TabKey = "todo" | "journal" | "week" | "shared";
 type MusicTrack = { url: string; title: string };
 
-const ADMIN_EMAIL = "mx.gin.xo@gmail.com";
+const ADMIN_EMAILS = ["mx.gin.xo@gmail.com", "1995dianalee@gmail.com"] as const;
 const BULLETS = ["☐", "☑", "☒"] as const;
 const WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
@@ -398,6 +398,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [profileEditing, setProfileEditing] = useState(false);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const isAdmin = ADMIN_EMAILS.includes((user.email || "").toLowerCase() as typeof ADMIN_EMAILS[number]);
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
   useEffect(() => subscribePairRequests(user.uid, setRequests), [user.uid]);
@@ -418,11 +419,16 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
     };
   }, [pair, user.uid]);
   useEffect(() => {
+    if (isAdmin) {
+      document.documentElement.style.setProperty("--app-font", `"HJSS", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
+      document.documentElement.dataset.font = "hjss";
+      return;
+    }
     const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
     document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
     document.documentElement.dataset.font = found.key;
     localStorage.setItem("twintodoFont", found.key);
-  }, [fontKey]);
+  }, [fontKey, isAdmin]);
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
     localStorage.setItem("twintodoTheme", darkMode ? "dark" : "light");
@@ -452,6 +458,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             defaultThemeColor={defaultThemeColor}
             fontKey={fontKey}
             onFontChange={setFontKey}
+            isAdmin={isAdmin}
             darkMode={darkMode}
             onDarkMode={setDarkMode}
             onBackgroundSaved={(url) => setBackgroundUrl(url)}
@@ -490,7 +497,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
       <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
       <MusicWidget userId={user.uid} color={color} open={activeWidget === "music"} onToggle={() => setActiveWidget((value) => value === "music" ? null : "music")} />
       <PomodoroWidget color={color} open={activeWidget === "pomo"} onToggle={() => setActiveWidget((value) => value === "pomo" ? null : "pomo")} />
-      {user.email === ADMIN_EMAIL && <DemianWidget />}
+      {isAdmin && <DemianWidget />}
     </div>
   );
 }
@@ -502,6 +509,7 @@ function ProfilePanel({
   defaultThemeColor,
   fontKey,
   onFontChange,
+  isAdmin,
   darkMode,
   onDarkMode,
   onBackgroundSaved,
@@ -515,6 +523,7 @@ function ProfilePanel({
   defaultThemeColor: string;
   fontKey: FontKey;
   onFontChange: (key: FontKey) => void;
+  isAdmin: boolean;
   darkMode: boolean;
   onDarkMode: (value: boolean) => void;
   onBackgroundSaved: (url: string) => void;
@@ -577,7 +586,7 @@ function ProfilePanel({
           <div className="profile-settings">
             <ThemePanel darkMode={darkMode} onChange={onDarkMode} color={color} />
             <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} />
-            <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />
+            {isAdmin ? <AdminFontPanel color={color} /> : <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />}
             <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
             <PairPanel requests={requests} pair={pair} color={color} />
           </div>
@@ -893,6 +902,15 @@ function FontPanel({ fontKey, onChange, color }: { fontKey: FontKey; onChange: (
       {FONT_OPTIONS.map((font) => (
         <button key={font.key} onClick={() => onChange(font.key)} style={{ ...pill(fontKey === font.key ? color : "var(--soft-bg)", fontKey === font.key ? "#fff" : "var(--muted)", true), fontFamily: `"${font.family}", sans-serif` }}>{font.label}</button>
       ))}
+    </div>
+  </section>;
+}
+
+function AdminFontPanel({ color }: { color: string }) {
+  return <section className="font-panel">
+    <span style={sectionLabel()}>font</span>
+    <div className="admin-font-fixed" style={{ color, borderColor: `${color}33`, background: `${color}10` }}>
+      HJSS 고정
     </div>
   </section>;
 }
