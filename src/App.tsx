@@ -71,10 +71,10 @@ const FONT_OPTIONS = [
 ] as const;
 type FontKey = typeof FONT_OPTIONS[number]["key"];
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
-const CATEGORY_ACCENT: Record<CategoryKey, string> = {
-  required: "#8A4545",
-  growth: "",
-  freedom: "#4a7c5a",
+const CATEGORY_TONE: Record<CategoryKey, number> = {
+  required: 0.14,
+  growth: 0,
+  freedom: -0.12,
 };
 const PAPER_TEXTURES = [
   "/textures/papertex1.jpg",
@@ -96,6 +96,40 @@ function readAppliedActions(key: string) {
   } catch {
     return {};
   }
+}
+
+function clamp(value: number, min = 0, max = 255) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function hexToRgb(hex: string) {
+  const value = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(value)) return null;
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  return `#${[r, g, b].map((part) => Math.round(clamp(part)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function tintColor(color: string, amount: number) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return color;
+  const target = amount >= 0 ? 255 : 0;
+  const ratio = Math.abs(amount);
+  return rgbToHex(
+    rgb.r + (target - rgb.r) * ratio,
+    rgb.g + (target - rgb.g) * ratio,
+    rgb.b + (target - rgb.b) * ratio,
+  );
+}
+
+function categoryColor(themeColor: string, key: CategoryKey) {
+  return tintColor(themeColor, CATEGORY_TONE[key]);
 }
 
 function isCoarsePointer() {
@@ -962,7 +996,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       {todoError && <p className="error-text">{todoError}</p>}
       <div>
         {CATEGORY_ORDER.map((key, idx) => {
-          const catColor = CATEGORY_ACCENT[key] || color;
+          const catColor = categoryColor(color, key);
           const list = visible.filter((todo) => todo.categoryKey === key);
           return (
             <div key={key} style={{ marginBottom: ".7rem" }}>
@@ -1112,7 +1146,7 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
           const list = todos.filter((todo) => todo.categoryKey === key);
           if (!list.length) return null;
           return <section key={key}>
-            <PrintSectionHeader label={labels[key]} color={CATEGORY_ACCENT[key] || color} />
+            <PrintSectionHeader label={labels[key]} color={categoryColor(color, key)} />
             {list.map((todo) => <div key={todo.id} className="print-row" style={{ color: (todo.state ?? 0) === 1 ? "#999" : "#1a1a1a", textDecoration: (todo.state ?? 0) === 1 ? "line-through" : "none", background: todo.important ? `${color}22` : "transparent" }}>
               <span>{(todo.state ?? 0) === 0 ? "·" : (todo.state ?? 0) === 1 ? "✓" : "✗"}</span>
               <p>{todo.title}</p>
@@ -1499,9 +1533,10 @@ function UserSharedCard({ user, todos, note, labels, notShared }: { user: { name
           {CATEGORY_ORDER.map((key) => {
             const items = todos.filter((todo) => todo.categoryKey === key);
             if (!items.length) return null;
+            const catColor = categoryColor(user.color, key);
             return (
               <div className="shared-category" key={key}>
-                <span style={{ color: user.color }}>{labels[key]}</span>
+                <span style={{ color: catColor }}>{labels[key]}</span>
                 {items.map((todo) => (
                   <div className={`shared-todo ${todo.hidden ? "private" : ""}`} key={todo.id}>
                     <span>{BULLETS[todo.state ?? 0]}</span>

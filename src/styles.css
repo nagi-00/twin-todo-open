@@ -69,9 +69,9 @@ html[data-theme="dark"] {
   --soft-line: rgba(255, 255, 255, 0.12);
   --text: #f2ece4;
   --text-soft: #ddd4ca;
-  --muted: #c4b9ae;
-  --muted-2: #aaa096;
-  --muted-3: #8f857b;
+  --muted: #b9b9b9;
+  --muted-2: #a2a2a2;
+  --muted-3: #858585;
   --panel-border: rgba(255, 255, 255, 0.16);
   --overlay-bg: rgba(37, 33, 30, 0.56);
 }
