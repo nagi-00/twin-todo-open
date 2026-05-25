@@ -1284,6 +1284,7 @@ function EditableBlock({
 }) {
   const [editing, setEditing] = useState(false);
   const userEditing = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!value.trim()) {
@@ -1292,6 +1293,14 @@ function EditableBlock({
     }
     if (!userEditing.current) setEditing(false);
   }, [value]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const frame = window.requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editing]);
 
   if (!editing) {
     return (
@@ -1319,6 +1328,7 @@ function EditableBlock({
 
   return (
     <textarea
+      ref={textareaRef}
       className={className}
       value={value}
       onChange={(event) => {
@@ -1340,7 +1350,6 @@ function EditableBlock({
       placeholder={placeholder}
       rows={rows}
       style={textareaStyle}
-      autoFocus
     />
   );
 }
