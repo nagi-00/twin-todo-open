@@ -90,6 +90,14 @@ function compactTime(time: number) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+function readAppliedActions(key: string) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "{}") as { routines?: boolean; x?: boolean };
+  } catch {
+    return {};
+  }
+}
+
 function isCoarsePointer() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 }
@@ -711,6 +719,9 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   const [printing, setPrinting] = useState(false);
   const [texture] = useState(() => PAPER_TEXTURES[Math.floor(Math.random() * PAPER_TEXTURES.length)]);
   const scopeKey = scope.type === "pair" ? `pair:${scope.pairId}` : `solo:${uid}`;
+  const appliedKey = `twintodoApplied:${scopeKey}:${dateKey}`;
+  const [appliedActions, setAppliedActions] = useState(() => readAppliedActions(appliedKey));
+  const [applyingAction, setApplyingAction] = useState<null | "routines" | "x">(null);
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
   useEffect(() => {
@@ -720,6 +731,10 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   useEffect(() => subscribeTextDoc(["users", uid, "notes", dateKey], "text", setNote), [uid, dateKey]);
   useEffect(() => subscribeMessages(uid, dateKey, setMessages), [uid, dateKey]);
   useEffect(() => subscribeRoutines(uid, setRoutines), [uid]);
+  useEffect(() => {
+    setAppliedActions(readAppliedActions(appliedKey));
+    setApplyingAction(null);
+  }, [appliedKey]);
 
   const mergedTodos = useMemo(() => {
     const map = new Map<string, TodoItem>();
@@ -731,6 +746,16 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   const done = visible.filter((todo) => (todo.state ?? (todo.status === "done" ? 1 : 0)) === 1).length;
   const pct = visible.length ? Math.round(done / visible.length * 100) : 0;
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
+  const dueRoutines = routines.filter((r) => (r.frequency || r.freq) === "daily" || (r.weekdays || [r.weekday]).includes(dayOfWeek));
+
+  function markApplied(action: "routines" | "x") {
+    setAppliedActions((prev) => {
+      const next = { ...prev, [action]: true };
+      localStorage.setItem(appliedKey, JSON.stringify(next));
+      return next;
+    });
+  }
 
   async function submit(key: CategoryKey) {
     const text = inputs[key].trim();
@@ -777,20 +802,33 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
   }
 
   async function applyRoutines() {
-    const day = new Date(`${dateKey}T00:00:00`).getDay();
-    const targets = routines.filter((r) => (r.frequency || r.freq) === "daily" || (r.weekdays || [r.weekday]).includes(day));
-    await Promise.all(targets.map((r) => addTodo(scope, dateKey, r.categoryKey, r.text)));
+    if (applyingAction || appliedActions.routines || !dueRoutines.length) return;
+    setApplyingAction("routines");
+    try {
+      await Promise.all(dueRoutines.map((r) => addTodo(scope, dateKey, r.categoryKey, r.text)));
+      markApplied("routines");
+    } finally {
+      setApplyingAction(null);
+    }
   }
 
   async function applyYesterdayX() {
+    if (applyingAction || appliedActions.x) return;
+    setApplyingAction("x");
     const previousDate = addDays(selectedDate, -1);
     const previousKey = toDateKey(previousDate);
     const failed = (await getTodosForDate(scope, previousKey)).filter((todo) => (todo.state ?? 0) === 2 && todo.status !== "archived");
     if (!failed.length) {
+      setApplyingAction(null);
       alert("전날 ☒ 항목이 없습니다.");
       return;
     }
-    await Promise.all(failed.map((todo) => addTodo(scope, dateKey, todo.categoryKey, todo.title)));
+    try {
+      await Promise.all(failed.map((todo) => addTodo(scope, dateKey, todo.categoryKey, todo.title)));
+      markApplied("x");
+    } finally {
+      setApplyingAction(null);
+    }
   }
 
   async function moveTodo(categoryKey: CategoryKey, todo: TodoItem, dir: -1 | 1) {
@@ -904,8 +942,8 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
         })}
       </div>
       <div className="todo-quick-actions">
-        <button onClick={applyYesterdayX} style={pill("#f0f0f0", "#888", true)}>☒ 적용</button>
-        {routines.length > 0 && <button style={pill(color, "#fff", true)} onClick={applyRoutines}>루틴 적용</button>}
+        {!appliedActions.x && <button disabled={applyingAction === "x"} onClick={applyYesterdayX} style={pill("#f0f0f0", "#888", true)}>☒ 적용</button>}
+        {!appliedActions.routines && dueRoutines.length > 0 && <button disabled={applyingAction === "routines"} style={pill(color, "#fff", true)} onClick={applyRoutines}>루틴 적용</button>}
       </div>
       <div className="timestamp-box">
         <span style={sectionLabel({ color })}>timestamp</span>
