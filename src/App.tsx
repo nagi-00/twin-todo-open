@@ -1098,29 +1098,31 @@ function DaylogCard({ dateLabel, note, todos, labels, color, texture }: { dateLa
 
 function ThemeConfetti({ color }: { color: string }) {
   const pieces = useMemo(() => Array.from({ length: 22 }, (_, index) => ({
-    left: 8 + Math.random() * 84,
-    delay: Math.random() * 0.18,
-    drift: (Math.random() - 0.5) * 90,
-    rotate: Math.random() * 260,
-    width: 3 + Math.random() * 5,
-    height: 6 + Math.random() * 8,
-    opacity: 0.35 + Math.random() * 0.38,
-    radius: Math.random() > 0.6 ? "999px" : "2px",
-    tint: index % 3 === 0 ? `${color}99` : index % 3 === 1 ? `${color}66` : color,
+    angle: (Math.PI * 2 * index) / 22 + (Math.random() - 0.5) * 0.42,
+    distance: 68 + Math.random() * 78,
+    fall: 22 + Math.random() * 46,
+    delay: Math.random() * 0.09,
+    rotate: 220 + Math.random() * 420,
+    width: 3 + Math.random() * 6,
+    height: 4 + Math.random() * 9,
+    opacity: 0.42 + Math.random() * 0.4,
+    radius: Math.random() > 0.55 ? "999px" : "2px",
+    tint: index % 4 === 0 ? "#fff" : index % 3 === 0 ? `${color}aa` : index % 3 === 1 ? `${color}66` : color,
   })), [color]);
   return (
-    <div className="theme-confetti" aria-hidden="true">
+    <div className="theme-confetti" style={{ "--burst-color": color } as CSSProperties} aria-hidden="true">
       {pieces.map((piece, index) => (
         <i
           key={index}
           style={{
-            left: `${piece.left}%`,
             animationDelay: `${piece.delay}s`,
-            "--drift": `${piece.drift}px`,
+            "--x": `${Math.cos(piece.angle) * piece.distance}px`,
+            "--y": `${Math.sin(piece.angle) * piece.distance}px`,
+            "--fall": `${piece.fall}px`,
             "--spin": `${piece.rotate}deg`,
+            "--piece-opacity": piece.opacity,
             width: `${piece.width}px`,
             height: `${piece.height}px`,
-            opacity: piece.opacity,
             borderRadius: piece.radius,
             background: piece.tint,
           } as CSSProperties}
