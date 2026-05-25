@@ -1634,15 +1634,38 @@ function RoutineModal({ uid, labels, routines, onClose }: { uid: string; labels:
   function toggleDay(day: number) {
     setWeekdays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day].sort());
   }
-  return <div className="modal-backdrop" onClick={onClose}><section className="modal-card routine-modal" onClick={(e) => e.stopPropagation()}><div className="modal-head"><b>루틴</b><button className="icon-btn" onClick={onClose}><X size={14} /></button></div>
-    <div className="routine-form">
-      <input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="새 루틴" />
-      <div className="routine-selects"><select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{labels[k]}</option>)}</select><select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select></div>
-      {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
-      <button className="dark-btn" onClick={add}>루틴 추가</button>
-    </div>
-    <div className="routine-list">{routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{labels[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>)}</div>
-  </section></div>;
+  return <div className="modal-backdrop" onClick={onClose}>
+    <section className="modal-card routine-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-head routine-head">
+        <div>
+          <b>루틴</b>
+          <p>반복할 일을 저장해두고 오늘 목록에 가볍게 불러와요.</p>
+        </div>
+        <button className="icon-btn" onClick={onClose}><X size={14} /></button>
+      </div>
+      <div className="routine-form">
+        <label className="routine-field">
+          <span>task</span>
+          <input className="soft-input" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="새 루틴" />
+        </label>
+        <div className="routine-selects">
+          <label className="routine-field">
+            <span>category</span>
+            <select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value as CategoryKey)}>{CATEGORY_KEYS.map((k) => <option key={k} value={k}>{labels[k]}</option>)}</select>
+          </label>
+          <label className="routine-field">
+            <span>repeat</span>
+            <select value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">매일</option><option value="weekly">매주</option></select>
+          </label>
+        </div>
+        {frequency === "weekly" && <div className="weekday-pills">{[1, 2, 3, 4, 5, 6, 0].map((day) => <button key={day} className={weekdays.includes(day) ? "active" : ""} onClick={() => toggleDay(day)}>{WEEK_KO[day]}</button>)}</div>}
+        <button className="dark-btn routine-add" onClick={add}>루틴 추가</button>
+      </div>
+      <div className="routine-list">
+        {routines.length ? routines.map((r) => <div className="routine-row" key={r.id}><span>{r.text}</span><small>{labels[r.categoryKey] || r.categoryKey}</small><button onClick={() => removeRoutine(uid, r.id)}>삭제</button></div>) : <div className="routine-empty">아직 저장된 루틴이 없어요.</div>}
+      </div>
+    </section>
+  </div>;
 }
 
 function MusicWidget({ userId, color, open, onToggle }: { userId: string; color: string; open: boolean; onToggle: () => void }) {
