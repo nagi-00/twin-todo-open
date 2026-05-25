@@ -1118,7 +1118,7 @@ function EditableBlock({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       onKeyDown={(event) => {
-        if (event.key === "Enter" && event.shiftKey && !isComposing(event)) {
+        if (event.key === "Enter" && (event.shiftKey || event.ctrlKey || event.metaKey) && !isComposing(event)) {
           event.preventDefault();
           setEditing(false);
           event.currentTarget.blur();
