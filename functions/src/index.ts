@@ -6,6 +6,7 @@ initializeApp();
 
 const db = getFirestore();
 const region = "asia-northeast3";
+const callableOptions = { region, enforceAppCheck: true };
 
 const reservedNicknames = new Set([
   "admin",
@@ -58,7 +59,7 @@ function buildPairKey(uidA: string, uidB: string) {
   return [uidA, uidB].sort().join("__");
 }
 
-export const claimNickname = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const claimNickname = onCall(callableOptions, async (request) => {
   const uid = requireUid(request.auth);
   const { nickname, normalized } = normalizeNickname(request.data?.nickname);
 
@@ -87,7 +88,7 @@ export const claimNickname = onCall({ region, enforceAppCheck: true }, async (re
   return { nickname, nicknameNormalized: normalized };
 });
 
-export const changeNickname = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const changeNickname = onCall(callableOptions, async (request) => {
   const uid = requireUid(request.auth);
   const { nickname, normalized } = normalizeNickname(request.data?.nickname);
 
@@ -120,7 +121,7 @@ export const changeNickname = onCall({ region, enforceAppCheck: true }, async (r
   return { nickname, nicknameNormalized: normalized };
 });
 
-export const searchNickname = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const searchNickname = onCall(callableOptions, async (request) => {
   requireUid(request.auth);
   const { normalized } = normalizeNickname(request.data?.nickname);
   const snap = await db.doc(`nicknames/${normalized}`).get();
@@ -133,7 +134,7 @@ export const searchNickname = onCall({ region, enforceAppCheck: true }, async (r
   };
 });
 
-export const createPairRequest = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const createPairRequest = onCall(callableOptions, async (request) => {
   const fromUid = requireUid(request.auth);
   const { normalized } = normalizeNickname(request.data?.nickname);
   const nicknameSnap = await db.doc(`nicknames/${normalized}`).get();
@@ -181,7 +182,7 @@ export const createPairRequest = onCall({ region, enforceAppCheck: true }, async
   return { requestId: requestRef.id };
 });
 
-export const acceptPairRequest = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const acceptPairRequest = onCall(callableOptions, async (request) => {
   const uid = requireUid(request.auth);
   const requestId = request.data?.requestId;
   if (typeof requestId !== "string") throw new HttpsError("invalid-argument", "요청 ID가 필요합니다.");
@@ -224,7 +225,7 @@ export const acceptPairRequest = onCall({ region, enforceAppCheck: true }, async
   return { pairId };
 });
 
-export const rejectPairRequest = onCall({ region, enforceAppCheck: true }, async (request) => {
+export const rejectPairRequest = onCall(callableOptions, async (request) => {
   const uid = requireUid(request.auth);
   const requestId = request.data?.requestId;
   if (typeof requestId !== "string") throw new HttpsError("invalid-argument", "요청 ID가 필요합니다.");
