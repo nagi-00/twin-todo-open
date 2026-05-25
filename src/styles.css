@@ -786,15 +786,23 @@ html[data-font="galmuri"] .journal textarea {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
   padding: 0.05rem 0.2rem 0.05rem 0.1rem;
   border-radius: 9999px;
   margin-bottom: 0.22rem;
   transition: background-color 0.65s ease-out, opacity 0.2s;
 }
 
+.todo-item.just-moved {
+  animation: todo-move-flash 0.65s ease-out;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--todo-color) 28%, transparent);
+}
+
 .todo-item > span {
   flex: 1;
+  min-width: 8rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: 0.82rem;
   line-height: 1.6;
   align-self: baseline;
@@ -836,39 +844,44 @@ html[data-font="galmuri"] .journal textarea {
   text-decoration: none;
 }
 
-.sort-stack {
+.reorder-controls {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 0.22rem;
   flex-shrink: 0;
   align-items: center;
 }
 
-.sort-stack button {
-  display: flex;
-  padding: 1px 3px;
-  color: #999;
+.reorder-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  min-height: 1.7rem;
+  border: 1px solid color-mix(in srgb, var(--todo-color) 22%, var(--line));
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--todo-color) 8%, var(--field-bg));
+  color: color-mix(in srgb, var(--todo-color) 62%, var(--text-soft));
+  font-family: var(--ui-font);
+  font-size: 0.62rem;
+  padding: 0.18rem 0.46rem;
 }
 
-.sort-stack button:disabled {
-  color: #ddd;
+.reorder-controls button:disabled {
+  border-color: var(--soft-line);
+  background: var(--soft-bg);
+  color: var(--muted-3);
+  opacity: 0.45;
 }
 
-.tri-up,
-.tri-down {
-  display: block;
-  width: 0;
-  height: 0;
-  border-left: 3.5px solid transparent;
-  border-right: 3.5px solid transparent;
-}
+@keyframes todo-move-flash {
+  0% {
+    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--todo-color) 40%, transparent), 0 5px 14px color-mix(in srgb, var(--todo-color) 18%, transparent);
+  }
 
-.tri-up {
-  border-bottom: 4.5px solid currentColor;
-}
-
-.tri-down {
-  border-top: 4.5px solid currentColor;
+  100% {
+    transform: translateY(0);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--todo-color) 0%, transparent), 0 0 0 transparent;
+  }
 }
 
 .todo-quick-actions {

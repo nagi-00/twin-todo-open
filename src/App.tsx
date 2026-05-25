@@ -1,6 +1,8 @@
 import { User } from "firebase/auth";
 import html2canvas from "html2canvas";
 import {
+  ArrowDown,
+  ArrowUp,
   Edit3,
   Link2,
   Lock,
@@ -992,8 +994,10 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
   const [applyingAction, setApplyingAction] = useState<null | "routines" | "x">(null);
   const [confettiNonce, setConfettiNonce] = useState(0);
   const [confettiOrigin, setConfettiOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [movedTodoId, setMovedTodoId] = useState<string | null>(null);
   const previousPct = useRef<number | null>(null);
   const pctRef = useRef<HTMLSpanElement | null>(null);
+  const moveFlashTimer = useRef<number | null>(null);
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
   useEffect(() => {
@@ -1133,6 +1137,9 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
       const active = new Map(nextVisible.map((item, index) => [item.id, { ...item, position: index + 1 }]));
       return prev.map((item) => active.get(item.id) || item);
     });
+    setMovedTodoId(todo.id);
+    if (moveFlashTimer.current) window.clearTimeout(moveFlashTimer.current);
+    moveFlashTimer.current = window.setTimeout(() => setMovedTodoId(null), 650);
     await reorderTodos(scope, nextVisible);
   }
 
@@ -1228,7 +1235,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
           return (
             <div key={key} style={{ marginBottom: ".7rem" }}>
               <span style={sectionLabel({ color: `${catColor}bb` })}>{labels[key]}</span>
-              {list.map((todo, catIdx) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} catIdx={catIdx} catLength={list.length} onPatch={patchLocal} onMove={(dir) => moveTodo(key, todo, dir)} />)}
+              {list.map((todo, catIdx) => <TodoRow key={todo.id} todo={todo} scope={scope} color={color} editMode={editMode} catIdx={catIdx} catLength={list.length} recentlyMoved={movedTodoId === todo.id} onPatch={patchLocal} onMove={(dir) => moveTodo(key, todo, dir)} />)}
               {list.length === 0 && !editMode && <div style={{ fontSize: ".75rem", color: "#e8e8e8", padding: ".1rem 0" }}>—</div>}
               {idx < CATEGORY_ORDER.length - 1 && <div style={{ borderTop: `1px solid ${color}22`, margin: ".6rem 0" }} />}
             </div>
@@ -1284,6 +1291,7 @@ function TodoRow({
   editMode,
   catIdx,
   catLength,
+  recentlyMoved,
   onPatch,
   onMove,
 }: {
@@ -1293,6 +1301,7 @@ function TodoRow({
   editMode: boolean;
   catIdx: number;
   catLength: number;
+  recentlyMoved: boolean;
   onPatch: (todoId: string, patch: Partial<TodoItem>) => void;
   onMove: (dir: -1 | 1) => void;
 }) {
@@ -1318,13 +1327,13 @@ function TodoRow({
     await updateTodoPatch(scope, todo, { memo: nextMemo });
   }
   return <div style={{ marginBottom: todo.memo && !memoOpen ? ".35rem" : ".22rem" }}>
-    <div className="todo-item" style={{ opacity: 1, backgroundColor: todo.important ? `${color}33` : "transparent" }}>
-    {editMode && <div className="sort-stack">
-      <button className="icon-btn" onClick={() => onMove(-1)} disabled={catIdx === 0}><span className="tri-up" /></button>
-      <button className="icon-btn" onClick={() => onMove(1)} disabled={catIdx === catLength - 1}><span className="tri-down" /></button>
-    </div>}
+    <div className={recentlyMoved ? "todo-item just-moved" : "todo-item"} style={{ "--todo-color": color, opacity: 1, backgroundColor: recentlyMoved ? `${color}22` : todo.important ? `${color}33` : "transparent" } as CSSProperties}>
     <button className="bullet-btn" onClick={cycle} style={{ color }}>{BULLETS[state]}</button>
     {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !isCoarsePointer()) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.title}</span>}
+    {editMode && <div className="reorder-controls">
+      <button onClick={() => onMove(-1)} disabled={catIdx === 0} aria-label="위로 이동"><ArrowUp size={12} />위로</button>
+      <button onClick={() => onMove(1)} disabled={catIdx === catLength - 1} aria-label="아래로 이동"><ArrowDown size={12} />아래로</button>
+    </div>}
     <button className="icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8", fontSize: ".7rem", letterSpacing: "-.03em" }}>{todo.memo && !memoOpen ? "✎·" : " ✎"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { important: !todo.important }); void updateTodoPatch(scope, todo, { important: !todo.important }); }} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { hidden: !todo.hidden }); void updateTodoPatch(scope, todo, { hidden: !todo.hidden }); }}>{todo.hidden ? <Lock size={13} /> : <Unlock size={13} />}</button>
