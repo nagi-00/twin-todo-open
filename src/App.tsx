@@ -71,10 +71,10 @@ const FONT_OPTIONS = [
 ] as const;
 type FontKey = typeof FONT_OPTIONS[number]["key"];
 const CATEGORY_ORDER: CategoryKey[] = ["required", "growth", "freedom"];
-const CATEGORY_TONE: Record<CategoryKey, number> = {
-  required: 0.14,
-  growth: 0,
-  freedom: -0.12,
+const CATEGORY_TONE: Record<CategoryKey, { hue: number; light: number }> = {
+  required: { hue: -10, light: 0.12 },
+  growth: { hue: 0, light: 0 },
+  freedom: { hue: 12, light: -0.1 },
 };
 const PAPER_TEXTURES = [
   "/textures/papertex1.jpg",
@@ -116,6 +116,48 @@ function rgbToHex(r: number, g: number, b: number) {
   return `#${[r, g, b].map((part) => Math.round(clamp(part)).toString(16).padStart(2, "0")).join("")}`;
 }
 
+function rgbToHsl(r: number, g: number, b: number) {
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const light = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l: light };
+  const delta = max - min;
+  const saturation = light > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+  const hue = max === red
+    ? (green - blue) / delta + (green < blue ? 6 : 0)
+    : max === green
+      ? (blue - red) / delta + 2
+      : (red - green) / delta + 4;
+  return { h: hue * 60, s: saturation, l: light };
+}
+
+function hslToRgb(h: number, s: number, l: number) {
+  const hue = (((h % 360) + 360) % 360) / 360;
+  if (s === 0) {
+    const gray = l * 255;
+    return { r: gray, g: gray, b: gray };
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hueToRgb = (t: number) => {
+    let value = t;
+    if (value < 0) value += 1;
+    if (value > 1) value -= 1;
+    if (value < 1 / 6) return p + (q - p) * 6 * value;
+    if (value < 1 / 2) return q;
+    if (value < 2 / 3) return p + (q - p) * (2 / 3 - value) * 6;
+    return p;
+  };
+  return {
+    r: hueToRgb(hue + 1 / 3) * 255,
+    g: hueToRgb(hue) * 255,
+    b: hueToRgb(hue - 1 / 3) * 255,
+  };
+}
+
 function tintColor(color: string, amount: number) {
   const rgb = hexToRgb(color);
   if (!rgb) return color;
@@ -129,7 +171,12 @@ function tintColor(color: string, amount: number) {
 }
 
 function categoryColor(themeColor: string, key: CategoryKey) {
-  return tintColor(themeColor, CATEGORY_TONE[key]);
+  const rgb = hexToRgb(themeColor);
+  if (!rgb) return themeColor;
+  const tone = CATEGORY_TONE[key];
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const shifted = hslToRgb(hsl.h + tone.hue, hsl.s, hsl.l);
+  return tintColor(rgbToHex(shifted.r, shifted.g, shifted.b), tone.light);
 }
 
 function isCoarsePointer() {
