@@ -301,6 +301,9 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   useEffect(() => subscribeDateColors(user.uid, setDateColors), [user.uid]);
   useEffect(() => subscribeNotes(user.uid, setNotes), [user.uid]);
   useEffect(() => {
+    if (pair) setScopeMode("pair");
+  }, [pair]);
+  useEffect(() => {
     const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
     document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
     localStorage.setItem("twintodoFont", found.key);

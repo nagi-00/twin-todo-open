@@ -21,8 +21,14 @@ service cloud.firestore {
     function isPairMember(pairId) {
       return signedIn()
         && pairExists(pairId)
-        && pairData(pairId).memberMap[request.auth.uid] == true
+        && pairData(pairId).members.hasAny([request.auth.uid])
         && pairData(pairId).status == "active";
+    }
+
+    function isPairMemberResource() {
+      return signedIn()
+        && resource.data.members.hasAny([request.auth.uid])
+        && resource.data.status == "active";
     }
 
     function validCategoryKey(value) {
@@ -172,7 +178,7 @@ service cloud.firestore {
     }
 
     match /pairs/{pairId} {
-      allow read: if isPairMember(pairId);
+      allow read: if isPairMemberResource();
       allow create, update, delete: if false;
 
       match /todos/{todoId} {

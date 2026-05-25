@@ -16,10 +16,17 @@ export function subscribeActivePair(uid: string, callback: (pair: Pair | null) =
     where("status", "==", "active"),
     limit(1),
   );
-  return onSnapshot(q, (snapshot) => {
-    const first = snapshot.docs[0];
-    callback(first ? ({ id: first.id, ...first.data() } as Pair) : null);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const first = snapshot.docs[0];
+      callback(first ? ({ id: first.id, ...first.data() } as Pair) : null);
+    },
+    (error) => {
+      console.error("Active pair subscription failed", error);
+      callback(null);
+    },
+  );
 }
 
 export function subscribePairRequests(uid: string, callback: (requests: PairRequest[]) => void) {
