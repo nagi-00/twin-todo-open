@@ -1070,7 +1070,7 @@ function DemianWidget() {
       return;
     }
     let alive = true;
-    fetch("https://raw.githubusercontent.com/nagi-00/nagi-todo/main/demian_focus_messages.json")
+    fetch("/data/demian_focus_messages.json", { cache: "no-store" })
       .then((res) => res.json())
       .then((data: { messages?: string[] }) => {
         if (!alive) return;
