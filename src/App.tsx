@@ -1331,8 +1331,8 @@ function TodoRow({
     <button className="bullet-btn" onClick={cycle} style={{ color }}>{BULLETS[state]}</button>
     {editing ? <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !isCoarsePointer()) { e.preventDefault(); void save(); } }} onBlur={save} rows={2} /> : <span className={state === 1 ? "completed" : state === 2 ? "crossed" : ""} onDoubleClick={() => setEditing(true)}>{todo.title}</span>}
     {editMode && <div className="reorder-controls">
-      <button onClick={() => onMove(-1)} disabled={catIdx === 0} aria-label="위로 이동"><ArrowUp size={12} />위로</button>
-      <button onClick={() => onMove(1)} disabled={catIdx === catLength - 1} aria-label="아래로 이동"><ArrowDown size={12} />아래로</button>
+      <button onClick={() => onMove(-1)} disabled={catIdx === 0} aria-label="위로 이동" title="위로"><ArrowUp size={11} /></button>
+      <button onClick={() => onMove(1)} disabled={catIdx === catLength - 1} aria-label="아래로 이동" title="아래로"><ArrowDown size={11} /></button>
     </div>}
     <button className="icon-btn" onClick={() => setMemoOpen((value) => !value)} style={{ color: todo.memo ? color : "#d8d8d8", fontSize: ".7rem", letterSpacing: "-.03em" }}>{todo.memo && !memoOpen ? "✎·" : " ✎"}</button>
     <button className="icon-btn" onClick={() => { onPatch(todo.id, { important: !todo.important }); void updateTodoPatch(scope, todo, { important: !todo.important }); }} style={{ color: todo.important ? color : "#ccc", fontSize: ".85rem" }}>{todo.important ? "★" : "☆"}</button>

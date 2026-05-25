@@ -851,7 +851,7 @@ html[data-font="galmuri"] .journal textarea {
 
 .reorder-controls {
   display: flex;
-  gap: 0.22rem;
+  gap: 0.12rem;
   flex-shrink: 0;
   align-items: center;
 }
@@ -859,15 +859,16 @@ html[data-font="galmuri"] .journal textarea {
 .reorder-controls button {
   display: inline-flex;
   align-items: center;
-  gap: 0.12rem;
-  min-height: 1.7rem;
+  justify-content: center;
+  width: 1.22rem;
+  height: 1.22rem;
+  min-height: 0;
   border: 1px solid color-mix(in srgb, var(--todo-color) 22%, var(--line));
   border-radius: 9999px;
   background: color-mix(in srgb, var(--todo-color) 8%, var(--field-bg));
   color: color-mix(in srgb, var(--todo-color) 62%, var(--text-soft));
   font-family: var(--ui-font);
-  font-size: 0.62rem;
-  padding: 0.18rem 0.46rem;
+  padding: 0;
 }
 
 .reorder-controls button:disabled {
