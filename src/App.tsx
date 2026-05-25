@@ -209,6 +209,11 @@ function isComposing(event: KeyboardEvent<HTMLTextAreaElement> | KeyboardEvent<H
   return Boolean((event.nativeEvent as { isComposing?: boolean }).isComposing);
 }
 
+function textareaRows(value: string, maxRows: number) {
+  if (!value.trim()) return 1;
+  return Math.max(1, Math.min(maxRows, value.split(/\r\n|\r|\n/).length));
+}
+
 function readFontScale() {
   const saved = localStorage.getItem("twintodoFontScale");
   return FONT_SCALE_OPTIONS.some((option) => option.key === saved) ? (saved as FontScaleKey) : "1.0";
@@ -1311,7 +1316,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
                 }
               }}
               placeholder={labels[key]}
-              rows={3}
+              rows={textareaRows(inputs[key], 3)}
             />
             <button onClick={() => submit(key)}>추가</button>
           </div>
@@ -1352,7 +1357,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
               }
             }}
             placeholder="한 줄 타임스탬프를 입력하는 공간입니다. "
-            rows={2}
+            rows={textareaRows(messageInput, 2)}
           />
           <button onClick={sendTimestamp}>stamp</button>
         </div>
@@ -1558,6 +1563,7 @@ function EditableBlock({
   const [editing, setEditing] = useState(false);
   const userEditing = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const empty = !value.trim();
 
   useEffect(() => {
     if (!value.trim()) {
@@ -1602,7 +1608,7 @@ function EditableBlock({
   return (
     <textarea
       ref={textareaRef}
-      className={className}
+      className={[className, empty ? "editable-empty" : ""].filter(Boolean).join(" ") || undefined}
       value={value}
       onChange={(event) => {
         userEditing.current = true;
@@ -1621,7 +1627,7 @@ function EditableBlock({
         if (value.trim()) setEditing(false);
       }}
       placeholder={placeholder}
-      rows={rows}
+      rows={empty ? 1 : rows}
       style={textareaStyle}
     />
   );

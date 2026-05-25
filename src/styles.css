@@ -1070,6 +1070,11 @@ html[data-font="galmuri"] .journal textarea {
   line-height: 1.7;
 }
 
+.journal textarea.editable-empty {
+  min-height: 0;
+  resize: none;
+}
+
 .journal textarea::placeholder {
   color: var(--muted-3);
   opacity: 0.5;
