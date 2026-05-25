@@ -408,11 +408,14 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   useEffect(() => {
     let cancelled = false;
     const partnerUid = pair?.members.find((member) => member !== user.uid);
-    setPartnerName(partnerUid ? pair?.memberNicknames?.[partnerUid] || "" : "");
-    if (!pair) return;
+    const pairPartnerName = partnerUid
+      ? pair?.memberDisplayNames?.[partnerUid] || pair?.memberNicknames?.[partnerUid] || ""
+      : "";
+    setPartnerName(pairPartnerName);
+    if (!pair || !partnerUid || pair?.memberDisplayNames?.[partnerUid]) return;
     getPairPartnerInfo(pair.id)
       .then((info) => {
-        if (!cancelled) setPartnerName(info.partnerName);
+        if (!cancelled) setPartnerName(info.partnerDisplayName || info.partnerName);
       })
       .catch(() => undefined);
     return () => {
@@ -1170,7 +1173,17 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
 
   async function shareToday() {
     try {
-      const payload = { todos: visible, note, color, labels, authorName: profile.displayName, authorNickname: profile.nickname, messages, updatedAt: null };
+      const payload = {
+        todos: visible,
+        note,
+        color,
+        labels,
+        authorName: profile.displayName,
+        authorNickname: profile.displayName,
+        authorHandle: profile.nickname,
+        messages,
+        updatedAt: null,
+      };
       await saveSharedDay(uid, dateKey, payload);
       if (pair) await savePairSharedDay(pair.id, uid, dateKey, payload);
       alert("공유가 완료되었습니다. SHARED 탭에서 확인해보세요!");
@@ -1736,7 +1749,11 @@ function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKe
   const myVisibleTodos = myTodos.filter((todo) => !todo.hidden);
   const partnerVisibleTodos = partnerTodos.filter((todo) => !todo.hidden);
   const partnerColor = partnerShared?.color || "#888";
-  const partnerName = partnerShared?.authorNickname || resolvedPartnerName || partnerShared?.authorName || (partnerUid ? pair.memberNicknames?.[partnerUid] : undefined) || "Twin";
+  const partnerName = resolvedPartnerName
+    || partnerShared?.authorName
+    || partnerShared?.authorNickname
+    || (partnerUid ? pair.memberDisplayNames?.[partnerUid] || pair.memberNicknames?.[partnerUid] : undefined)
+    || "Twin";
   const myLabels = shared?.labels || DEFAULT_CATEGORIES;
   const partnerLabels = partnerShared?.labels || DEFAULT_CATEGORIES;
   const timeline = [

@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, DocumentReference } from "firebase-admin/firestore";
+import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 initializeApp();
@@ -50,26 +51,32 @@ function normalizeNickname(input: unknown) {
   return { nickname, normalized };
 }
 
-async function getUserNickname(uid: string) {
-  const userSnap = await db.doc(`users/${uid}`).get();
-  return userSnap.exists ? userSnap.data()?.nickname ?? null : null;
+function asProfileString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function userDisplayFromData(data: { [field: string]: unknown } | undefined) {
+  return {
+    nickname: asProfileString(data?.nickname),
+    displayName: asProfileString(data?.displayName),
+  };
 }
 
 async function getUserDisplay(uid: string) {
   const userSnap = await db.doc(`users/${uid}`).get();
   if (!userSnap.exists) return { nickname: "", displayName: "" };
-  const data = userSnap.data();
-  return {
-    nickname: data?.nickname ?? "",
-    displayName: data?.displayName ?? "",
-  };
+  return userDisplayFromData(userSnap.data());
 }
 
 function buildPairKey(uidA: string, uidB: string) {
   return [uidA, uidB].sort().join("__");
 }
 
-function activePairPatch(uidA: string, uidB: string, nicknames?: Record<string, string | null>) {
+type PairMemberProfile = Record<string, { nickname?: string | null; displayName?: string | null }>;
+
+function activePairPatch(uidA: string, uidB: string, profiles?: PairMemberProfile) {
+  const profileA = profiles?.[uidA] ?? {};
+  const profileB = profiles?.[uidB] ?? {};
   return {
     members: [uidA, uidB],
     pairKey: buildPairKey(uidA, uidB),
@@ -78,8 +85,12 @@ function activePairPatch(uidA: string, uidB: string, nicknames?: Record<string, 
       [uidB]: true,
     },
     memberNicknames: {
-      [uidA]: nicknames?.[uidA] ?? "",
-      [uidB]: nicknames?.[uidB] ?? "",
+      [uidA]: profileA.nickname ?? "",
+      [uidB]: profileB.nickname ?? "",
+    },
+    memberDisplayNames: {
+      [uidA]: profileA.displayName ?? "",
+      [uidB]: profileB.displayName ?? "",
     },
     status: "active",
     updatedAt: FieldValue.serverTimestamp(),
@@ -87,8 +98,8 @@ function activePairPatch(uidA: string, uidB: string, nicknames?: Record<string, 
 }
 
 async function ensurePairReadable(pairRef: DocumentReference, uidA: string, uidB: string) {
-  const [nicknameA, nicknameB] = await Promise.all([getUserNickname(uidA), getUserNickname(uidB)]);
-  await pairRef.set(activePairPatch(uidA, uidB, { [uidA]: nicknameA, [uidB]: nicknameB }), { merge: true });
+  const [profileA, profileB] = await Promise.all([getUserDisplay(uidA), getUserDisplay(uidB)]);
+  await pairRef.set(activePairPatch(uidA, uidB, { [uidA]: profileA, [uidB]: profileB }), { merge: true });
   await pairRef.collection("settings").doc("categories").set({
     required: "필연",
     growth: "성장",
@@ -207,16 +218,18 @@ export const createPairRequest = onCall(callableOptions, async (request) => {
 
   if (!duplicate.empty) throw new HttpsError("already-exists", "이미 보낸 요청이 있습니다.");
 
-  const [fromNickname, toNickname] = await Promise.all([
-    getUserNickname(fromUid),
-    getUserNickname(toUid),
+  const [fromProfile, toProfile] = await Promise.all([
+    getUserDisplay(fromUid),
+    getUserDisplay(toUid),
   ]);
 
   const requestRef = await db.collection("pairRequests").add({
     fromUid,
     toUid,
-    fromNickname,
-    toNickname,
+    fromNickname: fromProfile.nickname,
+    toNickname: toProfile.nickname,
+    fromDisplayName: fromProfile.displayName,
+    toDisplayName: toProfile.displayName,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -239,11 +252,23 @@ export const acceptPairRequest = onCall(callableOptions, async (request) => {
     if (data.toUid !== uid) throw new HttpsError("permission-denied", "수락 권한이 없습니다.");
     if (data.status !== "pending") throw new HttpsError("failed-precondition", "대기 중인 요청이 아닙니다.");
 
+    const [fromUserSnap, toUserSnap] = await Promise.all([
+      tx.get(db.doc(`users/${data.fromUid}`)),
+      tx.get(db.doc(`users/${data.toUid}`)),
+    ]);
+    const fromProfile = userDisplayFromData(fromUserSnap.data());
+    const toProfile = userDisplayFromData(toUserSnap.data());
     const pairRef = db.collection("pairs").doc();
     tx.set(pairRef, {
       ...activePairPatch(data.fromUid, data.toUid, {
-        [data.fromUid]: data.fromNickname ?? "",
-        [data.toUid]: data.toNickname ?? "",
+        [data.fromUid]: {
+          nickname: fromProfile.nickname || data.fromNickname || "",
+          displayName: fromProfile.displayName || data.fromDisplayName || "",
+        },
+        [data.toUid]: {
+          nickname: toProfile.nickname || data.toNickname || "",
+          displayName: toProfile.displayName || data.toDisplayName || "",
+        },
       }),
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -326,18 +351,55 @@ export const getPairPartnerInfo = onCall(callableOptions, async (request) => {
   if (!partnerUid) throw new HttpsError("failed-precondition", "파트너를 찾을 수 없습니다.");
 
   const [me, partner] = await Promise.all([getUserDisplay(uid), getUserDisplay(partnerUid)]);
-  await pairRef.set({
-    memberNicknames: {
-      [uid]: me.nickname,
-      [partnerUid]: partner.nickname,
-    },
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  const nextMemberNicknames = {
+    [uid]: me.nickname,
+    [partnerUid]: partner.nickname,
+  };
+  const nextMemberDisplayNames = {
+    [uid]: me.displayName,
+    [partnerUid]: partner.displayName,
+  };
+  const shouldSyncPair = Object.entries(nextMemberNicknames).some(([memberUid, nickname]) => pair.memberNicknames?.[memberUid] !== nickname)
+    || Object.entries(nextMemberDisplayNames).some(([memberUid, displayName]) => pair.memberDisplayNames?.[memberUid] !== displayName);
+
+  if (shouldSyncPair) {
+    await pairRef.set({
+      memberNicknames: nextMemberNicknames,
+      memberDisplayNames: nextMemberDisplayNames,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
 
   return {
     partnerUid,
     partnerNickname: partner.nickname,
     partnerDisplayName: partner.displayName,
-    partnerName: partner.nickname || partner.displayName || "Twin",
+    partnerName: partner.displayName || partner.nickname || "Twin",
   };
+});
+
+export const syncPairMemberDisplayName = onDocumentUpdated({ region, document: "users/{uid}" }, async (event) => {
+  const uid = event.params.uid;
+  const beforeName = asProfileString(event.data?.before.data()?.displayName);
+  const afterName = asProfileString(event.data?.after.data()?.displayName);
+
+  if (!uid || beforeName === afterName) return;
+
+  const pairs = await db.collection("pairs")
+    .where("members", "array-contains", uid)
+    .where("status", "==", "active")
+    .get();
+
+  if (pairs.empty) return;
+
+  const batch = db.batch();
+  pairs.docs.forEach((pairDoc) => {
+    batch.set(pairDoc.ref, {
+      memberDisplayNames: {
+        [uid]: afterName,
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+  await batch.commit();
 });

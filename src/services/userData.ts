@@ -31,6 +31,7 @@ export type SharedDay = {
   labels?: CategoryLabels;
   authorName?: string;
   authorNickname?: string | null;
+  authorHandle?: string | null;
   messages: Message[];
   updatedAt?: unknown;
 };
