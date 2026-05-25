@@ -207,7 +207,7 @@ function pill(bg = "var(--soft-bg)", fg = "var(--text-soft)", sm = false) {
 }
 
 function sectionLabel(extra?: CSSProperties) {
-  return { fontSize: ".6rem", letterSpacing: ".2em", color: "var(--muted-2)", marginBottom: ".5rem", display: "block", ...extra };
+  return { fontSize: ".6rem", letterSpacing: ".2em", color: "var(--muted-2)", marginBottom: ".5rem", display: "block", fontFamily: "var(--ui-font)", ...extra };
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -465,10 +465,10 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
       <main className="main main-content" onClick={() => activeWidget && setActiveWidget(null)}>
         <div className="tab-bar">
           {[
-            ["todo", "ᴛᴏᴅᴏ"],
-            ["journal", "ᴊᴏᴜʀɴᴀʟ"],
-            ["week", "ᴡᴇᴇᴋ"],
-            ["shared", "sʜᴀʀᴇᴅ"],
+            ["todo", "TODO"],
+            ["journal", "JOURNAL"],
+            ["week", "WEEK"],
+            ["shared", "SHARED"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -1561,16 +1561,16 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
   }
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const divider = { borderTop: `1px solid ${color}20`, margin: "1.25rem 0" };
-  const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem" };
+  const label = { fontSize: ".6rem", letterSpacing: ".2em", color: `${color}99`, display: "block", marginBottom: ".5rem", fontFamily: "var(--ui-font)" };
   return <section className="journal" style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
       <h2 style={{ fontSize: "1rem", fontWeight: "bold", color: "var(--text)" }}>{dateLabel}</h2>
       <button onClick={printNightlog} style={{ ...pill(color, "#fff", true), padding: ".28rem .7rem", flexShrink: 0 }}>print</button>
     </div>
-    <span style={label}>ᴍᴏʀɴɪɴɢ</span>
+    <span style={label}>MORNING</span>
     <EditableBlock value={journal.morning ?? ""} onChange={(value) => updateJournal({ morning: value })} placeholder="하루를 시작하며 떠오르는 생각을 자유롭게 입력하는 공간입니다. " />
     <div style={divider} />
-    <span style={label}>ɢʀᴀᴛɪᴛᴜᴅᴇ</span>
+    <span style={label}>GRATITUDE</span>
     {[0, 1, 2].map((index) => (
       <div key={index} style={{ display: "flex", alignItems: "center", gap: ".35rem", marginBottom: ".35rem" }}>
         <span style={{ fontSize: ".62rem", color, flexShrink: 0, fontFamily: "monospace", width: ".8rem", textAlign: "right" }}>{index + 1}.</span>
@@ -1582,13 +1582,13 @@ function JournalView({ uid, selectedDate, dateKey, color }: { uid: string; selec
       </div>
     ))}
     <div style={divider} />
-    <span style={label}>ᴅɪᴀʀʏ</span>
+    <span style={label}>DIARY</span>
     <EditableBlock value={daily.diary ?? ""} onChange={(value) => updateDaily({ diary: value })} placeholder="하루를 마무리하며 떠오르는 생각을 자유롭게 입력하는 공간입니다. " rows={6} />
     <div style={divider} />
-    <span style={label}>ᴍᴏᴏᴅ</span>
+    <span style={label}>MOOD</span>
     <MoodPicker value={daily.mood || []} onChange={(mood) => updateDaily({ mood })} color={color} />
     <div style={divider} />
-    <span style={label}>ᴅʀᴇᴀᴍ</span>
+    <span style={label}>DREAM</span>
     <EditableBlock value={daily.dream ?? ""} onChange={(value) => updateDaily({ dream: value })} placeholder="이루고 싶은 미래를 현재형으로 적는 공간입니다. '나는 이미 ___이다.'" rows={4} textareaStyle={{ fontStyle: "italic" }} />
     {printing && <NightlogCard dateLabel={dateLabel} journal={journal} daily={daily} color={color} texture={texture} />}
   </section>;
@@ -1643,7 +1643,7 @@ function WeekView({ uid, selectedDate, defaultThemeColor }: { uid: string; selec
   return <section style={CARD}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem" }}>
       <div>
-        <span style={sectionLabel({ marginBottom: ".2rem" })}>ᴡᴇᴇᴋʟʏ ʀᴇᴠɪᴇᴡ</span>
+        <span style={sectionLabel({ marginBottom: ".2rem" })}>WEEKLY REVIEW</span>
         <div style={{ fontSize: ".78rem", color: "var(--muted)" }}>{toDateKey(days[0])} - {toDateKey(days[6])}</div>
       </div>
     </div>
@@ -1887,10 +1887,10 @@ function MusicWidget({ userId, color, open, onToggle }: { userId: string; color:
   return <div className={open ? "music-widget widget-open" : "music-widget"}>
     <button onClick={onToggle}>
       <span style={{ fontSize: "12px", color: currentEmbed ? color : "#ccc" }}>♪</span>
-      <span style={{ fontSize: "10px", color: "#bbb", letterSpacing: ".1em" }}>ᴍᴜsɪᴄ</span>
+      <span style={{ fontSize: "10px", color: "#bbb", letterSpacing: ".1em" }}>MUSIC</span>
     </button>
     <div className="music-panel" style={{ left: open ? 0 : "-9999px" }}>
-      <div className="widget-head"><span>ᴍᴜsɪᴄ</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
+      <div className="widget-head"><span>MUSIC</span><button onClick={() => setUrlBar((v) => !v)} style={{ color }}>+ 추가</button></div>
       {urlBar && <div className="music-url"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="YouTube 영상 URL" /><button onClick={() => void add()} style={{ background: color }}>→</button></div>}
       {tracks.length > 0 ? <div className="track-list">{tracks.map((track, i) => <div key={`${track.url}-${i}`} onClick={() => setCurrent(i)} style={{ background: i === current ? `${color}18` : "transparent" }}><span style={{ color: i === current ? color : "#ddd" }}>▶</span><b className="track-title" title={track.title}><em>{track.title}</em></b><button onClick={(event) => { event.stopPropagation(); removeTrack(i); }}>✕</button></div>)}</div> : <div className="music-empty"><span>♪</span><p>YouTube URL을 추가해주세요. </p><button onClick={() => setUrlBar(true)}>+ 추가</button></div>}
       {currentEmbed && <iframe src={currentEmbed.url} width="290" height="163" title="YouTube player" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />}
@@ -2087,7 +2087,7 @@ function DemianWidget() {
         </div>)}
         <div className="demian-actions"><button onClick={() => setConfigOpen(false)}>취소</button><button onClick={save}>저장</button></div>
       </div> : <>
-        <b>ᴅᴇᴍɪᴀɴ</b>
+        <b>DEMIAN</b>
         <p>{message}</p>
       </>}
     </div>}
