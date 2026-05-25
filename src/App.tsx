@@ -28,6 +28,19 @@ import type { CategoryKey, CategoryLabels, Pair, PairRequest, TodoItem, UserProf
 
 type Scope = { type: "solo"; uid: string } | { type: "pair"; pairId: string; uid: string };
 
+function getErrorMessage(err: unknown) {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = String((err as { code: unknown }).code);
+    if (code === "auth/popup-blocked") return "팝업이 차단되었습니다. 브라우저 주소창의 팝업 차단을 허용해주세요.";
+    if (code === "auth/popup-closed-by-user") return "로그인 창이 닫혔습니다. 다시 시도해주세요.";
+    if (code === "auth/unauthorized-domain") return "현재 도메인이 Firebase Authentication 승인된 도메인에 없습니다.";
+    if (code === "auth/operation-not-allowed") return "Firebase Authentication에서 Google 로그인이 아직 사용 설정되지 않았습니다.";
+    if (code === "auth/network-request-failed") return "네트워크 요청이 차단되었습니다. App Check, CSP, 브라우저 확장 설정을 확인해주세요.";
+    return `${code}: ${err instanceof Error ? err.message : "Firebase 오류가 발생했습니다."}`;
+  }
+  return err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+}
+
 export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -88,7 +101,7 @@ function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
+      setError(getErrorMessage(err));
     } finally {
       setBusy(false);
     }
