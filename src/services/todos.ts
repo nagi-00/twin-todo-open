@@ -46,7 +46,7 @@ function sortTodos(a: TodoItem, b: TodoItem) {
 
 export async function addTodo(scope: TodoScope, date: string, categoryKey: CategoryKey, title: string) {
   const ownerUid = scope.uid;
-  await addDoc(todosCollection(scope), {
+  const ref = await addDoc(todosCollection(scope), {
     ownerUid,
     categoryKey,
     title: title.trim(),
@@ -60,6 +60,7 @@ export async function addTodo(scope: TodoScope, date: string, categoryKey: Categ
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  return ref.id;
 }
 
 export async function updateTodoStatus(scope: TodoScope, todo: TodoItem, status: TodoStatus) {

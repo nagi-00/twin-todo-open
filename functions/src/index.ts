@@ -24,27 +24,27 @@ function requireUid(auth: { uid: string } | undefined) {
 
 function normalizeNickname(input: unknown) {
   if (typeof input !== "string") {
-    throw new HttpsError("invalid-argument", "닉네임 형식이 올바르지 않습니다.");
+    throw new HttpsError("invalid-argument", "ID 형식이 올바르지 않습니다.");
   }
 
   const nickname = input.normalize("NFKC").trim().replace(/\s+/g, " ");
   const normalized = nickname.toLowerCase();
 
   if (nickname.length < 2 || nickname.length > 20) {
-    throw new HttpsError("invalid-argument", "닉네임은 2자 이상 20자 이하로 입력해주세요.");
+    throw new HttpsError("invalid-argument", "ID는 2자 이상 20자 이하로 입력해주세요.");
   }
 
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(nickname)) {
-    throw new HttpsError("invalid-argument", "닉네임에 사용할 수 없는 문자가 있습니다.");
+    throw new HttpsError("invalid-argument", "ID에 사용할 수 없는 문자가 있습니다.");
   }
 
   if (/https?:\/\//i.test(nickname) || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(nickname)) {
-    throw new HttpsError("invalid-argument", "URL이나 이메일 형태는 닉네임으로 사용할 수 없습니다.");
+    throw new HttpsError("invalid-argument", "URL이나 이메일 형태는 ID로 사용할 수 없습니다.");
   }
 
   if (reservedNicknames.has(normalized)) {
-    throw new HttpsError("invalid-argument", "사용할 수 없는 닉네임입니다.");
+    throw new HttpsError("invalid-argument", "사용할 수 없는 ID입니다.");
   }
 
   return { nickname, normalized };
@@ -69,8 +69,8 @@ export const claimNickname = onCall(callableOptions, async (request) => {
     const [userSnap, nicknameSnap] = await Promise.all([tx.get(userRef), tx.get(nicknameRef)]);
 
     if (!userSnap.exists) throw new HttpsError("failed-precondition", "사용자 프로필이 없습니다.");
-    if (userSnap.data()?.nicknameNormalized) throw new HttpsError("failed-precondition", "이미 닉네임이 있습니다.");
-    if (nicknameSnap.exists) throw new HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
+    if (userSnap.data()?.nicknameNormalized) throw new HttpsError("failed-precondition", "이미 ID가 있습니다.");
+    if (nicknameSnap.exists) throw new HttpsError("already-exists", "이미 사용 중인 ID입니다.");
 
     tx.set(nicknameRef, {
       uid,
@@ -102,7 +102,7 @@ export const changeNickname = onCall(callableOptions, async (request) => {
     if (currentNormalized === normalized) return;
 
     const nicknameSnap = await tx.get(nicknameRef);
-    if (nicknameSnap.exists) throw new HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
+    if (nicknameSnap.exists) throw new HttpsError("already-exists", "이미 사용 중인 ID입니다.");
 
     if (currentNormalized) tx.delete(db.doc(`nicknames/${currentNormalized}`));
     tx.set(nicknameRef, {
@@ -139,7 +139,7 @@ export const createPairRequest = onCall(callableOptions, async (request) => {
   const { normalized } = normalizeNickname(request.data?.nickname);
   const nicknameSnap = await db.doc(`nicknames/${normalized}`).get();
 
-  if (!nicknameSnap.exists) throw new HttpsError("not-found", "해당 닉네임을 찾을 수 없습니다.");
+  if (!nicknameSnap.exists) throw new HttpsError("not-found", "해당 ID를 찾을 수 없습니다.");
 
   const toUid = nicknameSnap.data()?.uid;
   if (!toUid || toUid === fromUid) {

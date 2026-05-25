@@ -990,18 +990,44 @@ select {
   margin-top: 0;
 }
 
-.pomo-panel b {
-  display: block;
-  text-align: center;
-  font-size: 1.4rem;
-  font-weight: 500;
-  color: #333;
-  margin: 0.45rem 0;
-}
-
 .pomo-modes {
   display: flex;
   gap: 0.25rem;
+}
+
+.pomo-dial {
+  width: 132px;
+  height: 132px;
+  margin: 0.7rem auto 0.65rem;
+  border-radius: 50%;
+  padding: 6px;
+  box-shadow: inset 0 0 0 1px #eee, 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.pomo-dial > div {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.pomo-dial b {
+  display: block;
+  color: #333;
+  font-size: 1.45rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pomo-dial span {
+  display: block;
+  margin-top: 0.15rem;
+  color: #bbb;
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
 }
 
 .pomo-modes button,

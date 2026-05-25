@@ -421,12 +421,12 @@ function ProfilePanel({
           </div>
         )}
       </div>
-      {editorOpen && <AvatarEditor uid={user.uid} onClose={() => setEditorOpen(false)} />}
+      {editorOpen && <AvatarEditor uid={user.uid} onSaved={(url) => setAvatarUrl(url)} onClose={() => setEditorOpen(false)} />}
     </section>
   );
 }
 
-function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
+function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: string) => void; onClose: () => void }) {
   const [src, setSrc] = useState<string | null>(null);
   const [shape, setShape] = useState<"circle" | "square">("circle");
   const [angle, setAngle] = useState(0);
@@ -498,7 +498,8 @@ function AvatarEditor({ uid, onClose }: { uid: string; onClose: () => void }) {
     if (!canvas) return;
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.92));
     if (!blob) return;
-    await uploadAvatar(uid, new File([blob], "avatar.webp", { type: "image/webp" }));
+    const url = await uploadAvatar(uid, new File([blob], "avatar.webp", { type: "image/webp" }));
+    onSaved(`${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`);
     onClose();
   }
 
@@ -650,6 +651,7 @@ function PairPanel({ requests, pair, mode, onMode, color }: { requests: PairRequ
 
 function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; uid: string; selectedDate: Date; dateKey: string; color: string }) {
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [optimisticTodos, setOptimisticTodos] = useState<TodoItem[]>([]);
   const [labels, setLabels] = useState<CategoryLabels>(DEFAULT_CATEGORIES);
   const [inputs, setInputs] = useState<Record<CategoryKey, string>>({ required: "", growth: "", freedom: "" });
   const [note, setNote] = useState("");
@@ -665,12 +667,21 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
   const scopeKey = scope.type === "pair" ? `pair:${scope.pairId}` : `solo:${uid}`;
 
   useEffect(() => subscribeTodos(scope, dateKey, setTodos), [scope, scopeKey, dateKey]);
+  useEffect(() => {
+    setOptimisticTodos((prev) => prev.filter((todo) => !todos.some((serverTodo) => serverTodo.id === todo.id)));
+  }, [todos]);
   useEffect(() => subscribeCategories(scope, setLabels), [scope, scopeKey]);
   useEffect(() => subscribeTextDoc(["users", uid, "notes", dateKey], "text", setNote), [uid, dateKey]);
   useEffect(() => subscribeMessages(uid, dateKey, setMessages), [uid, dateKey]);
   useEffect(() => subscribeRoutines(uid, setRoutines), [uid]);
 
-  const visible = todos.filter((todo) => todo.status !== "archived");
+  const mergedTodos = useMemo(() => {
+    const map = new Map<string, TodoItem>();
+    todos.forEach((todo) => map.set(todo.id, todo));
+    optimisticTodos.forEach((todo) => map.set(todo.id, todo));
+    return [...map.values()].sort((a, b) => (a.position ?? Number.POSITIVE_INFINITY) - (b.position ?? Number.POSITIVE_INFINITY));
+  }, [todos, optimisticTodos]);
+  const visible = mergedTodos.filter((todo) => todo.status !== "archived");
   const done = visible.filter((todo) => (todo.state ?? (todo.status === "done" ? 1 : 0)) === 1).length;
   const pct = visible.length ? Math.round(done / visible.length * 100) : 0;
   const dateLabel = selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -679,16 +690,35 @@ function TodoView({ scope, uid, selectedDate, dateKey, color }: { scope: Scope; 
     const text = inputs[key].trim();
     if (!text) return;
     setTodoError("");
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimistic: TodoItem = {
+      id: tempId,
+      ownerUid: uid,
+      categoryKey: key,
+      title: text,
+      status: "open",
+      state: 0,
+      hidden: false,
+      important: false,
+      memo: "",
+      position: Date.now(),
+      date: dateKey,
+    };
+    setOptimisticTodos((prev) => [...prev, optimistic]);
+    setInputs((prev) => ({ ...prev, [key]: "" }));
     try {
-      await addTodo(scope, dateKey, key, text);
-      setInputs((prev) => ({ ...prev, [key]: "" }));
+      const id = await addTodo(scope, dateKey, key, text);
+      setOptimisticTodos((prev) => prev.map((todo) => todo.id === tempId ? { ...todo, id } : todo));
     } catch (err) {
+      setOptimisticTodos((prev) => prev.filter((todo) => todo.id !== tempId));
+      setInputs((prev) => ({ ...prev, [key]: text }));
       setTodoError(err instanceof Error ? err.message : "할일 등록에 실패했습니다.");
     }
   }
 
   function patchLocal(todoId: string, patch: Partial<TodoItem>) {
     setTodos((prev) => prev.map((todo) => todo.id === todoId ? { ...todo, ...patch } : todo));
+    setOptimisticTodos((prev) => prev.map((todo) => todo.id === todoId ? { ...todo, ...patch } : todo));
   }
 
   async function sendTimestamp() {
@@ -1248,20 +1278,38 @@ function WeatherWidget({ color, open, onToggle }: { color: string; open: boolean
   }
 
   useEffect(() => {
+    async function loadWeather(latitude: number, longitude: number) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+        const data = await res.json();
+        setWeather(data.current_weather);
+        setError(false);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    const saved = localStorage.getItem("twintodoWeatherCoords");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as { latitude: number; longitude: number };
+        void loadWeather(parsed.latitude, parsed.longitude);
+        return;
+      } catch {
+        localStorage.removeItem("twintodoWeatherCoords");
+      }
+    }
+
     if (!navigator.geolocation) {
       setError(true);
       setLoading(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(async ({ coords: { latitude, longitude } }) => {
-      try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-        const data = await res.json();
-        setWeather(data.current_weather);
-      } catch {
-        setError(true);
-      }
-      setLoading(false);
+      localStorage.setItem("twintodoWeatherCoords", JSON.stringify({ latitude, longitude }));
+      await loadWeather(latitude, longitude);
     }, () => {
       setError(true);
       setLoading(false);
@@ -1313,9 +1361,13 @@ function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolea
   }
   const mm = Math.floor(left / 60).toString().padStart(2, "0");
   const ss = (left % 60).toString().padStart(2, "0");
+  const progress = Math.max(0, Math.min(1, 1 - left / (minutes[mode] * 60)));
+  const modeLabel = mode === "focus" ? "focus" : mode === "short" ? "short rest" : "long rest";
   return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button onClick={onToggle}>◷</button>{open && <div className="widget-panel pomo-panel">
     <div className="pomo-modes">{(["focus", "short", "long"] as const).map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => selectMode(item)}>{item}</button>)}</div>
-    <b>{mm}:{ss}</b>
+    <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, #f1f1f1 0deg)` }}>
+      <div><b>{mm}:{ss}</b><span>{running ? "running" : modeLabel}</span></div>
+    </div>
     <div className="button-row"><button style={{ background: color }} onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
     {settingsOpen && <div className="pomo-settings">{(["focus", "short", "long"] as const).map((item) => <label key={item}><span>{item}</span><input value={minutes[item]} onChange={(event) => updateMinutes(item, event.target.value)} /></label>)}</div>}
   </div>}</div>;
