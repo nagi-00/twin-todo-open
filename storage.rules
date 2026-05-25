@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAllowedAvatarContentType() {
+      return request.resource.contentType in [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ];
+    }
+
+    match /profiles/{uid}/avatar/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid)
+        && request.resource.size <= 2 * 1024 * 1024
+        && isAllowedAvatarContentType();
+      allow delete: if isSelf(uid);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
