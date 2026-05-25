@@ -1594,7 +1594,7 @@ function UserSharedCard({ user, todos, note, labels, notShared }: { user: { name
                 <span style={{ color: catColor }}>{labels[key]}</span>
                 {items.map((todo) => (
                   <div className={`shared-todo ${todo.hidden ? "private" : ""}`} key={todo.id}>
-                    <span>{BULLETS[todo.state ?? 0]}</span>
+                    <span style={{ color: todo.hidden ? undefined : user.color }}>{BULLETS[todo.state ?? 0]}</span>
                     <p>{todo.hidden ? "비공개 일정입니다." : todo.title}</p>
                     {todo.important && !todo.hidden && <b style={{ color: user.color }}>★</b>}
                     {todo.memo && !todo.hidden && <small>{todo.memo}</small>}
