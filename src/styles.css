@@ -809,8 +809,8 @@ select {
 
 .shared-timeline-row {
   display: grid;
-  grid-template-columns: 3.1rem 4.5rem 1fr;
-  gap: 0.45rem;
+  grid-template-columns: 2.75rem minmax(3rem, max-content) minmax(0, 1fr);
+  gap: 0.6rem;
   align-items: baseline;
   font-size: 0.74rem;
   line-height: 1.55;
@@ -819,10 +819,12 @@ select {
 .shared-timeline-row span {
   color: #bbb;
   font-size: 0.65rem;
+  white-space: nowrap;
 }
 
 .shared-timeline-row b {
   font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .shared-timeline-row p {
@@ -876,7 +878,7 @@ select {
   }
 
   .shared-timeline-row {
-    grid-template-columns: 2.7rem 3.8rem 1fr;
+    grid-template-columns: 2.55rem minmax(2.6rem, max-content) minmax(0, 1fr);
     gap: 0.35rem;
   }
 
@@ -948,6 +950,10 @@ select {
 }
 
 .timestamp-box p {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
   margin: 0.18rem 0;
   color: #888;
   font-size: 0.74rem;
@@ -956,11 +962,15 @@ select {
 }
 
 .timestamp-box p b {
-  display: inline-block;
-  min-width: 3.4rem;
   color: #c8c8c8;
   font-size: 0.62rem;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.timestamp-box p span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .timestamp-input {

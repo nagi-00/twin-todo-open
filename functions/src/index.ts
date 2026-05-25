@@ -55,6 +55,16 @@ async function getUserNickname(uid: string) {
   return userSnap.exists ? userSnap.data()?.nickname ?? null : null;
 }
 
+async function getUserDisplay(uid: string) {
+  const userSnap = await db.doc(`users/${uid}`).get();
+  if (!userSnap.exists) return { nickname: "", displayName: "" };
+  const data = userSnap.data();
+  return {
+    nickname: data?.nickname ?? "",
+    displayName: data?.displayName ?? "",
+  };
+}
+
 function buildPairKey(uidA: string, uidB: string) {
   return [uidA, uidB].sort().join("__");
 }
@@ -295,4 +305,39 @@ export const disconnectPair = onCall(callableOptions, async (request) => {
   });
 
   return { ok: true };
+});
+
+export const getPairPartnerInfo = onCall(callableOptions, async (request) => {
+  const uid = requireUid(request.auth);
+  const pairId = request.data?.pairId;
+  if (typeof pairId !== "string") throw new HttpsError("invalid-argument", "연결 ID가 필요합니다.");
+
+  const pairRef = db.doc(`pairs/${pairId}`);
+  const pairSnap = await pairRef.get();
+  if (!pairSnap.exists) throw new HttpsError("not-found", "연결을 찾을 수 없습니다.");
+
+  const pair = pairSnap.data()!;
+  if (pair.status !== "active" || pair.memberMap?.[uid] !== true) {
+    throw new HttpsError("permission-denied", "연결 정보를 볼 권한이 없습니다.");
+  }
+
+  const members = Array.isArray(pair.members) ? pair.members : [];
+  const partnerUid = members.find((member) => member !== uid);
+  if (!partnerUid) throw new HttpsError("failed-precondition", "파트너를 찾을 수 없습니다.");
+
+  const [me, partner] = await Promise.all([getUserDisplay(uid), getUserDisplay(partnerUid)]);
+  await pairRef.set({
+    memberNicknames: {
+      [uid]: me.nickname,
+      [partnerUid]: partner.nickname,
+    },
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return {
+    partnerUid,
+    partnerNickname: partner.nickname,
+    partnerDisplayName: partner.displayName,
+    partnerName: partner.nickname || partner.displayName || "Twin",
+  };
 });

@@ -35,3 +35,8 @@ export async function disconnectPair(pairId: string) {
   const fn = callable<{ pairId: string }, { ok: true }>("disconnectPair");
   return (await fn({ pairId })).data;
 }
+
+export async function getPairPartnerInfo(pairId: string) {
+  const fn = callable<{ pairId: string }, { partnerUid: string; partnerNickname: string; partnerDisplayName: string; partnerName: string }>("getPairPartnerInfo");
+  return (await fn({ pairId })).data;
+}

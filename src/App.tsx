@@ -19,7 +19,7 @@ import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
 import { logout, signInWithGoogle, subscribeAuth } from "./services/auth";
 import { saveCategories, subscribeCategories } from "./services/categories";
-import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, rejectPairRequest } from "./services/functions";
+import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, getPairPartnerInfo, rejectPairRequest } from "./services/functions";
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
 import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
 import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDisplayName, uploadAvatar } from "./services/profile";
@@ -84,6 +84,11 @@ const PAPER_TEXTURES = [
   "/textures/papertex5.png",
   "/textures/papertex6.jpg",
 ];
+
+function compactTime(time: number) {
+  const date = new Date(time);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
 
 function isCoarsePointer() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -296,6 +301,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeWidget, setActiveWidget] = useState<null | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
+  const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
   useEffect(() => subscribePairRequests(user.uid, setRequests), [user.uid]);
@@ -304,6 +310,20 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   useEffect(() => {
     if (pair) setScopeMode("pair");
   }, [pair]);
+  useEffect(() => {
+    let cancelled = false;
+    const partnerUid = pair?.members.find((member) => member !== user.uid);
+    setPartnerName(partnerUid ? pair?.memberNicknames?.[partnerUid] || "" : "");
+    if (!pair) return;
+    getPairPartnerInfo(pair.id)
+      .then((info) => {
+        if (!cancelled) setPartnerName(info.partnerName);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [pair, user.uid]);
   useEffect(() => {
     const found = FONT_OPTIONS.find((font) => font.key === fontKey) || FONT_OPTIONS[0];
     document.documentElement.style.setProperty("--app-font", `"${found.family}", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`);
@@ -358,7 +378,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
         {tab === "todo" && <TodoView scope={scope} uid={user.uid} profile={profile} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "journal" && <JournalView uid={user.uid} selectedDate={selectedDate} dateKey={dateKey} color={color} />}
         {tab === "week" && <WeekView uid={user.uid} selectedDate={selectedDate} />}
-        {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} dateKey={dateKey} color={color} pair={pair} />}
+        {tab === "shared" && <SharedView uid={user.uid} displayName={profile.displayName} partnerName={partnerName} dateKey={dateKey} color={color} pair={pair} />}
       </main>
       <WeatherWidget color={color} open={activeWidget === "weather"} onToggle={() => setActiveWidget((value) => value === "weather" ? null : "weather")} />
       <MusicWidget userId={user.uid} color={color} open={activeWidget === "music"} onToggle={() => setActiveWidget((value) => value === "music" ? null : "music")} />
@@ -890,7 +910,7 @@ function TodoView({ scope, uid, profile, selectedDate, dateKey, color }: { scope
       <div className="timestamp-box">
         <span style={sectionLabel({ color })}>timestamp</span>
         {messages.map((message) => (
-          <p key={message.time}><b>{new Date(message.time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</b>{message.text}</p>
+          <p key={message.time}><b>{compactTime(message.time)}</b><span>{message.text}</span></p>
         ))}
         <div className="timestamp-input">
           <textarea
@@ -1075,7 +1095,18 @@ function EditableBlock({
 
   if (!editing) {
     return (
-      <div className={viewClassName || "editable-view"} onDoubleClick={() => setEditing(true)}>
+      <div
+        className={viewClassName || "editable-view"}
+        onDoubleClick={() => setEditing(true)}
+        onTouchEnd={(event) => {
+          event.preventDefault();
+          setEditing(true);
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setEditing(true);
+        }}
+      >
         <div style={viewStyle}>{value.trim() ? value : <span>{placeholder}</span>}</div>
       </div>
     );
@@ -1092,6 +1123,9 @@ function EditableBlock({
           setEditing(false);
           event.currentTarget.blur();
         }
+      }}
+      onBlur={() => {
+        if (value.trim()) setEditing(false);
       }}
       placeholder={placeholder}
       rows={rows}
@@ -1248,7 +1282,7 @@ function WeekDayMini({ uid, date, color }: { uid: string; date: Date; color: str
   </div>;
 }
 
-function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; displayName: string; dateKey: string; color: string; pair: Pair | null }) {
+function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKey, color, pair }: { uid: string; displayName: string; partnerName: string; dateKey: string; color: string; pair: Pair | null }) {
   const [shared, setShared] = useState<SharedDay | null>(null);
   const [partnerShared, setPartnerShared] = useState<SharedDay | null>(null);
   const partnerUid = pair?.members.find((member) => member !== uid) || null;
@@ -1281,7 +1315,7 @@ function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; d
   const myVisibleTodos = myTodos.filter((todo) => !todo.hidden);
   const partnerVisibleTodos = partnerTodos.filter((todo) => !todo.hidden);
   const partnerColor = partnerShared?.color || "#888";
-  const partnerName = partnerShared?.authorName || partnerShared?.authorNickname || (partnerUid ? pair.memberNicknames?.[partnerUid] : undefined) || "Twin";
+  const partnerName = partnerShared?.authorNickname || resolvedPartnerName || partnerShared?.authorName || (partnerUid ? pair.memberNicknames?.[partnerUid] : undefined) || "Twin";
   const myLabels = shared?.labels || DEFAULT_CATEGORIES;
   const partnerLabels = partnerShared?.labels || DEFAULT_CATEGORIES;
   const timeline = [
@@ -1303,7 +1337,7 @@ function SharedView({ uid, displayName, dateKey, color, pair }: { uid: string; d
         <div className="shared-timeline">
           {timeline.length ? timeline.map((message, index) => (
             <div key={`${message.time}-${index}`} className="shared-timeline-row">
-              <span>{new Date(message.time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
+              <span>{compactTime(message.time)}</span>
               <b style={{ color: message.color }}>{message.owner}</b>
               <p>{message.text}</p>
             </div>
