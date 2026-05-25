@@ -390,6 +390,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [activeWidget, setActiveWidget] = useState<null | "weather" | "music" | "pomo">(null);
   const [fontKey, setFontKey] = useState<FontKey>(() => (localStorage.getItem("twintodoFont") as FontKey) || "leeseyoon");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("twintodoTheme") === "dark");
+  const [profileEditing, setProfileEditing] = useState(false);
   const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
@@ -439,10 +440,11 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             onFontChange={setFontKey}
             darkMode={darkMode}
             onDarkMode={setDarkMode}
+            onEditingChange={setProfileEditing}
             requests={requests}
             pair={pair}
           />
-          <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />
+          {!profileEditing && <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />}
         </div>
       </aside>
       <main className="main main-content" onClick={() => activeWidget && setActiveWidget(null)}>
@@ -486,6 +488,7 @@ function ProfilePanel({
   onFontChange,
   darkMode,
   onDarkMode,
+  onEditingChange,
   requests,
   pair,
 }: {
@@ -496,6 +499,7 @@ function ProfilePanel({
   onFontChange: (key: FontKey) => void;
   darkMode: boolean;
   onDarkMode: (value: boolean) => void;
+  onEditingChange: (value: boolean) => void;
   requests: PairRequest[];
   pair: Pair | null;
 }) {
@@ -512,6 +516,10 @@ function ProfilePanel({
   useEffect(() => {
     if (editing) setDraftFontKey(fontKey);
   }, [editing, fontKey]);
+  useEffect(() => {
+    onEditingChange(editing);
+    return () => onEditingChange(false);
+  }, [editing, onEditingChange]);
 
   async function saveName() {
     if (!name.trim()) return;
