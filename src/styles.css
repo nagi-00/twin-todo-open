@@ -1563,7 +1563,7 @@ html[data-theme="dark"] .mood-row button {
 }
 
 .pomo-modes button.active {
-  background: var(--text);
+  background: var(--pomo-accent, var(--text));
   color: #fff;
 }
 

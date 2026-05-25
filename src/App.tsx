@@ -1788,12 +1788,12 @@ function PomodoroWidget({ color, open, onToggle }: { color: string; open: boolea
   const ss = (left % 60).toString().padStart(2, "0");
   const progress = Math.max(0, Math.min(1, 1 - left / (minutes[mode] * 60)));
   const modeLabel = mode === "focus" ? "focus" : mode === "short" ? "short rest" : "long rest";
-  return <div className={open ? "pomo-widget widget-open" : "pomo-widget"}><button className={running && !open ? "pomo-live" : ""} onClick={onToggle}><span>◷</span>{running && !open && <b>{mm}:{ss}</b>}</button>{open && <div className="widget-panel pomo-panel">
+  return <div className={open ? "pomo-widget widget-open" : "pomo-widget"} style={{ "--pomo-accent": color } as CSSProperties}><button className={running && !open ? "pomo-live" : ""} onClick={onToggle}><span>◷</span>{running && !open && <b>{mm}:{ss}</b>}</button>{open && <div className="widget-panel pomo-panel">
     <div className="pomo-modes">{(["focus", "short", "long"] as const).map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => selectMode(item)}>{item}</button>)}</div>
     <div className="pomo-dial" style={{ background: `conic-gradient(${color} ${progress * 360}deg, var(--soft-bg) 0deg)` }}>
       <div><b>{mm}:{ss}</b><span>{running ? "running" : modeLabel}</span></div>
     </div>
-    <div className="button-row pomo-controls" style={{ "--pomo-accent": color } as CSSProperties}><button onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
+    <div className="button-row pomo-controls"><button onClick={() => setRunning((v) => !v)}>{running ? <Pause size={14} /> : <Play size={14} />}</button><button onClick={() => { setRunning(false); setLeft(minutes[mode] * 60); }}><RotateCcw size={14} /></button><button onClick={() => setSettingsOpen((v) => !v)}>설정</button></div>
     {settingsOpen && <div className="pomo-settings">{(["focus", "short", "long"] as const).map((item) => <label key={item}><span>{item}</span><input value={minutes[item]} onChange={(event) => updateMinutes(item, event.target.value)} /></label>)}</div>}
   </div>}</div>;
 }
