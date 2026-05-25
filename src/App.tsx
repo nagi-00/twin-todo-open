@@ -1200,10 +1200,10 @@ function EditableBlock({
     <textarea
       className={className}
       value={value}
-      onFocus={() => {
+      onChange={(event) => {
         userEditing.current = true;
+        onChange(event.target.value);
       }}
-      onChange={(event) => onChange(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === "Enter" && (event.shiftKey || event.ctrlKey || event.metaKey) && !isComposing(event)) {
           event.preventDefault();
