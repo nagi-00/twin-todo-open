@@ -40,3 +40,13 @@ export async function getPairPartnerInfo(pairId: string) {
   const fn = callable<{ pairId: string }, { partnerUid: string; partnerNickname: string; partnerDisplayName: string; partnerName: string }>("getPairPartnerInfo");
   return (await fn({ pairId })).data;
 }
+
+export async function prepareUpload(kind: "avatar" | "background") {
+  const fn = callable<{ kind: "avatar" | "background" }, { ok: true; expiresAt: number }>("prepareUpload");
+  return (await fn({ kind })).data;
+}
+
+export async function shareDay(date: string, pairId: string | null, shared: unknown) {
+  const fn = callable<{ date: string; pairId: string | null; shared: unknown }, { ok: true }>("shareDay");
+  return (await fn({ date, pairId, shared })).data;
+}

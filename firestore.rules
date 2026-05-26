@@ -10,6 +10,21 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email in [
+          "mx.gin.xo@gmail.com",
+          "1995dianalee@gmail.com"
+        ];
+    }
+
+    function hasBackgroundEntitlement(uid) {
+      return isAdmin()
+        || (exists(/databases/$(database)/documents/entitlements/$(uid))
+          && get(/databases/$(database)/documents/entitlements/$(uid)).data.backgroundImageUnlocked == true);
+    }
+
     function pairExists(pairId) {
       return exists(/databases/$(database)/documents/pairs/$(pairId));
     }
@@ -125,6 +140,10 @@ service cloud.firestore {
           "defaultThemeColor",
           "updatedAt"
         ])
+        && (!request.resource.data.diff(resource.data).changedKeys().hasAny([
+          "backgroundPath",
+          "backgroundOpacity"
+        ]) || hasBackgroundEntitlement(uid))
         && (!("backgroundOpacity" in request.resource.data)
           || (request.resource.data.backgroundOpacity is number
             && request.resource.data.backgroundOpacity >= 0
@@ -181,6 +200,19 @@ service cloud.firestore {
         allow read, create, update: if isSelf(uid);
         allow delete: if false;
       }
+    }
+
+    match /entitlements/{uid} {
+      allow read: if isSelf(uid);
+      allow create, update, delete: if false;
+    }
+
+    match /usageDaily/{usageId} {
+      allow read, write: if false;
+    }
+
+    match /uploadTickets/{uid}/kinds/{kind} {
+      allow read, write: if false;
     }
 
     match /nicknames/{nicknameNormalized} {

@@ -10,6 +10,25 @@ service firebase.storage {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email in [
+          "mx.gin.xo@gmail.com",
+          "1995dianalee@gmail.com"
+        ];
+    }
+
+    function hasAvatarTicket(uid) {
+      return firestore.exists(/databases/(default)/documents/uploadTickets/$(uid)/kinds/avatar)
+        && firestore.get(/databases/(default)/documents/uploadTickets/$(uid)/kinds/avatar).data.expiresAt > request.time;
+    }
+
+    function hasBackgroundTicket(uid) {
+      return firestore.exists(/databases/(default)/documents/uploadTickets/$(uid)/kinds/background)
+        && firestore.get(/databases/(default)/documents/uploadTickets/$(uid)/kinds/background).data.expiresAt > request.time;
+    }
+
     function isAllowedAvatarContentType() {
       return request.resource.contentType in [
         "image/jpeg",
@@ -21,16 +40,18 @@ service firebase.storage {
     match /profiles/{uid}/avatar/{fileName} {
       allow read: if signedIn();
       allow create, update: if isSelf(uid)
-        && request.resource.size <= 2 * 1024 * 1024
-        && isAllowedAvatarContentType();
+        && request.resource.size <= 512 * 1024
+        && isAllowedAvatarContentType()
+        && (isAdmin() || hasAvatarTicket(uid));
       allow delete: if isSelf(uid);
     }
 
     match /profiles/{uid}/background/{fileName} {
       allow read: if signedIn();
       allow create, update: if isSelf(uid)
-        && request.resource.size <= 4 * 1024 * 1024
-        && isAllowedAvatarContentType();
+        && request.resource.size <= 1536 * 1024
+        && isAllowedAvatarContentType()
+        && (isAdmin() || hasBackgroundTicket(uid));
       allow delete: if isSelf(uid);
     }
 

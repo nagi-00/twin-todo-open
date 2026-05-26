@@ -375,6 +375,30 @@ select {
   border-top: 1px solid var(--soft-line);
 }
 
+.pair-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0.55rem;
+}
+
+.pair-switcher button {
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-family: var(--ui-font);
+  font-size: 0.66rem;
+  padding: 0.28rem 0.58rem;
+  max-width: 100%;
+}
+
+.pair-switcher button.active {
+  background: color-mix(in srgb, var(--pair-color) 18%, var(--field-bg));
+  border-color: color-mix(in srgb, var(--pair-color) 38%, var(--line));
+  color: var(--pair-color);
+}
+
 .font-panel {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
@@ -450,6 +474,14 @@ select {
   font-family: inherit;
   font-size: 0.72rem;
   padding: 0.42rem 0.7rem;
+}
+
+.background-open.locked {
+  opacity: 0.72;
+  cursor: not-allowed;
+  background: var(--soft-bg);
+  color: var(--muted);
+  border-color: var(--line);
 }
 
 .default-color-row {

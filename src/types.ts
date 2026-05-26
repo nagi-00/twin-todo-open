@@ -19,6 +19,13 @@ export type UserProfile = {
   updatedAt?: unknown;
 };
 
+export type Entitlements = {
+  pairSlots: number;
+  purchasedPairSlots: number;
+  backgroundImageUnlocked: boolean;
+  updatedAt?: unknown;
+};
+
 export type TodoItem = {
   id: string;
   ownerUid: string;

@@ -1,6 +1,5 @@
 import {
   collection,
-  limit,
   onSnapshot,
   query,
   where,
@@ -9,22 +8,24 @@ import { db } from "../firebase";
 import type { Pair, PairRequest } from "../types";
 
 export function subscribeActivePair(uid: string, callback: (pair: Pair | null) => void) {
+  return subscribeActivePairs(uid, (pairs) => callback(pairs[0] || null));
+}
+
+export function subscribeActivePairs(uid: string, callback: (pairs: Pair[]) => void) {
   if (!db) return () => undefined;
   const q = query(
     collection(db, "pairs"),
     where("members", "array-contains", uid),
     where("status", "==", "active"),
-    limit(1),
   );
   return onSnapshot(
     q,
     (snapshot) => {
-      const first = snapshot.docs[0];
-      callback(first ? ({ id: first.id, ...first.data() } as Pair) : null);
+      callback(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Pair));
     },
     (error) => {
-      console.error("Active pair subscription failed", error);
-      callback(null);
+      console.error("Active pairs subscription failed", error);
+      callback([]);
     },
   );
 }

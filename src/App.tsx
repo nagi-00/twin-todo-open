@@ -22,9 +22,10 @@ import { CATEGORY_KEYS, DEFAULT_CATEGORIES } from "./lib/categories";
 import { addDays, monthMatrix, toDateKey } from "./lib/date";
 import { logout, signInWithGoogle, subscribeAuth } from "./services/auth";
 import { saveCategories, subscribeCategories } from "./services/categories";
-import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, getPairPartnerInfo, rejectPairRequest } from "./services/functions";
+import { ADMIN_ENTITLEMENTS, FREE_ENTITLEMENTS, subscribeEntitlements } from "./services/entitlements";
+import { acceptPairRequest, claimNickname, createPairRequest, disconnectPair, getPairPartnerInfo, rejectPairRequest, shareDay } from "./services/functions";
 import { JournalEntry, saveJournal, subscribeJournal } from "./services/journal";
-import { subscribeActivePair, subscribePairRequests } from "./services/pairs";
+import { subscribeActivePairs, subscribePairRequests } from "./services/pairs";
 import { ensureUserProfile, getAvatarUrl, subscribeProfile, updateDefaultThemeColor, updateDisplayName, uploadAvatar, uploadBackground } from "./services/profile";
 import { addTodo, archiveTodo, getTodosForDate, reorderTodos, subscribeTodos, updateTodoPatch, updateTodoTitle } from "./services/todos";
 import {
@@ -35,8 +36,6 @@ import {
   saveDaily,
   saveDateColor,
   saveMessages,
-  savePairSharedDay,
-  saveSharedDay,
   SharedDay,
   subscribeDaily,
   subscribeDateColors,
@@ -48,13 +47,15 @@ import {
   subscribeSharedDay,
   saveTextDoc,
 } from "./services/userData";
-import type { CategoryKey, CategoryLabels, Pair, PairRequest, Routine, TodoItem, UserProfile } from "./types";
+import type { CategoryKey, CategoryLabels, Entitlements, Pair, PairRequest, Routine, TodoItem, UserProfile } from "./types";
 
 type Scope = { type: "solo"; uid: string } | { type: "pair"; pairId: string; uid: string };
 type TabKey = "todo" | "journal" | "week" | "shared";
 type MusicTrack = { url: string; title: string };
 
 const ADMIN_EMAILS = ["mx.gin.xo@gmail.com", "1995dianalee@gmail.com"] as const;
+const AVATAR_TARGET_BYTES = 450 * 1024;
+const BACKGROUND_TARGET_BYTES = 1200 * 1024;
 const BULLETS = ["☐", "☑", "☒"] as const;
 const WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const MOODS = ["행복", "보통", "슬픔", "화남", "설렘"];
@@ -110,6 +111,16 @@ const PAPER_TEXTURES = [
 function compactTime(time: number) {
   const date = new Date(time);
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function pairPartner(pair: Pair | null | undefined, uid: string) {
+  return pair?.members.find((member) => member !== uid) || "";
+}
+
+function pairPartnerName(pair: Pair | null | undefined, uid: string) {
+  const partnerUid = pairPartner(pair, uid);
+  if (!partnerUid || !pair) return "";
+  return pair.memberDisplayNames?.[partnerUid] || pair.memberNicknames?.[partnerUid] || "Twin";
 }
 
 function readAppliedActions(key: string) {
@@ -265,6 +276,20 @@ async function exportElementAsPng(elementId: string, filename: string, backgroun
   }
 }
 
+async function canvasToBoundedFile(canvas: HTMLCanvasElement, filename: string, maxBytes: number, startQuality = 0.9) {
+  let quality = startQuality;
+  let fallback: Blob | null = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob) break;
+    fallback = blob;
+    if (blob.size <= maxBytes) return new File([blob], filename, { type: "image/webp" });
+    quality = Math.max(0.58, quality - 0.08);
+  }
+  if (!fallback) throw new Error("이미지 압축에 실패했습니다.");
+  return new File([fallback], filename, { type: "image/webp" });
+}
+
 function ytEmbed(raw: string) {
   try {
     const u = new URL(raw.trim());
@@ -418,7 +443,8 @@ function HandleOnboarding({ displayName }: { displayName: string }) {
 function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tab, setTab] = useState<TabKey>("todo");
-  const [pair, setPair] = useState<Pair | null>(null);
+  const [pairs, setPairs] = useState<Pair[]>([]);
+  const [activePairId, setActivePairId] = useState<string | null>(() => localStorage.getItem(`twintodoActivePair:${user.uid}`));
   const [requests, setRequests] = useState<PairRequest[]>([]);
   const [dateColors, setDateColors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -430,19 +456,36 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
   const [profileEditing, setProfileEditing] = useState(false);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const [entitlements, setEntitlements] = useState<Entitlements>(FREE_ENTITLEMENTS);
   const isAdmin = ADMIN_EMAILS.includes((user.email || "").toLowerCase() as typeof ADMIN_EMAILS[number]);
+  const effectiveEntitlements = isAdmin ? ADMIN_ENTITLEMENTS : entitlements;
+  const canUseBackgroundImage = effectiveEntitlements.backgroundImageUnlocked;
+  const pair = useMemo(() => pairs.find((item) => item.id === activePairId) || pairs[0] || null, [activePairId, pairs]);
 
-  useEffect(() => subscribeActivePair(user.uid, setPair), [user.uid]);
+  useEffect(() => subscribeActivePairs(user.uid, setPairs), [user.uid]);
   useEffect(() => subscribePairRequests(user.uid, setRequests), [user.uid]);
   useEffect(() => subscribeDateColors(user.uid, setDateColors), [user.uid]);
   useEffect(() => subscribeNotes(user.uid, setNotes), [user.uid]);
+  useEffect(() => subscribeEntitlements(user.uid, setEntitlements), [user.uid]);
+  useEffect(() => {
+    const key = `twintodoActivePair:${user.uid}`;
+    if (!pairs.length) {
+      setActivePairId(null);
+      localStorage.removeItem(key);
+      return;
+    }
+    if (!pairs.some((item) => item.id === activePairId)) {
+      setActivePairId(pairs[0].id);
+      localStorage.setItem(key, pairs[0].id);
+      return;
+    }
+    if (activePairId) localStorage.setItem(key, activePairId);
+  }, [activePairId, pairs, user.uid]);
   useEffect(() => {
     let cancelled = false;
-    const partnerUid = pair?.members.find((member) => member !== user.uid);
-    const pairPartnerName = partnerUid
-      ? pair?.memberDisplayNames?.[partnerUid] || pair?.memberNicknames?.[partnerUid] || ""
-      : "";
-    setPartnerName(pairPartnerName);
+    const partnerUid = pairPartner(pair, user.uid);
+    const currentPartnerName = pairPartnerName(pair, user.uid);
+    setPartnerName(currentPartnerName);
     if (!pair || !partnerUid || pair?.memberDisplayNames?.[partnerUid]) return;
     getPairPartnerInfo(pair.id)
       .then((info) => {
@@ -485,7 +528,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
 
   return (
     <div className="app" style={{ display: "flex", minHeight: "100vh" }}>
-      {backgroundUrl && <div className="app-bg-image" style={{ backgroundImage: `url("${backgroundUrl}")`, opacity: backgroundOpacity }} />}
+      {backgroundUrl && canUseBackgroundImage && <div className="app-bg-image" style={{ backgroundImage: `url("${backgroundUrl}")`, opacity: backgroundOpacity }} />}
       <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
       <div className={sidebarOpen ? "sidebar-overlay open" : "sidebar-overlay"} onClick={() => setSidebarOpen(false)} />
       <aside className={sidebarOpen ? "sidebar open" : "sidebar"}>
@@ -499,6 +542,7 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             fontScaleKey={fontScaleKey}
             onFontChange={setFontKey}
             onFontScaleChange={setFontScaleKey}
+            entitlements={effectiveEntitlements}
             isAdmin={isAdmin}
             darkMode={darkMode}
             onDarkMode={setDarkMode}
@@ -506,6 +550,9 @@ function Workspace({ user, profile }: { user: User; profile: UserProfile }) {
             onEditingChange={setProfileEditing}
             requests={requests}
             pair={pair}
+            pairs={pairs}
+            activePairId={activePairId}
+            onActivePairChange={setActivePairId}
           />
           {!profileEditing && <CalendarPanel selectedDate={selectedDate} onSelect={(date) => { setSelectedDate(date); setSidebarOpen(false); }} colors={dateColors} notes={notes} accent={color} />}
         </div>
@@ -552,6 +599,7 @@ function ProfilePanel({
   fontScaleKey,
   onFontChange,
   onFontScaleChange,
+  entitlements,
   isAdmin,
   darkMode,
   onDarkMode,
@@ -559,6 +607,9 @@ function ProfilePanel({
   onEditingChange,
   requests,
   pair,
+  pairs,
+  activePairId,
+  onActivePairChange,
 }: {
   user: User;
   profile: UserProfile;
@@ -568,6 +619,7 @@ function ProfilePanel({
   fontScaleKey: FontScaleKey;
   onFontChange: (key: FontKey) => void;
   onFontScaleChange: (key: FontScaleKey) => void;
+  entitlements: Entitlements;
   isAdmin: boolean;
   darkMode: boolean;
   onDarkMode: (value: boolean) => void;
@@ -575,6 +627,9 @@ function ProfilePanel({
   onEditingChange: (value: boolean) => void;
   requests: PairRequest[];
   pair: Pair | null;
+  pairs: Pair[];
+  activePairId: string | null;
+  onActivePairChange: (pairId: string) => void;
 }) {
   const [name, setName] = useState(profile.displayName);
   const [editing, setEditing] = useState(false);
@@ -638,8 +693,8 @@ function ProfilePanel({
             <DefaultThemeColorPanel uid={user.uid} value={defaultThemeColor} />
             {isAdmin ? <AdminFontPanel color={color} /> : <FontPanel fontKey={draftFontKey} onChange={setDraftFontKey} color={color} />}
             <FontScalePanel fontScaleKey={draftFontScaleKey} onChange={setDraftFontScaleKey} color={color} />
-            <BackgroundPanel color={color} onOpen={() => setBackgroundEditorOpen(true)} />
-            <PairPanel requests={requests} pair={pair} color={color} />
+            <BackgroundPanel color={color} unlocked={entitlements.backgroundImageUnlocked} onOpen={() => setBackgroundEditorOpen(true)} />
+            <PairPanel uid={user.uid} requests={requests} pair={pair} pairs={pairs} activePairId={activePairId} onActivePairChange={onActivePairChange} color={color} pairSlots={entitlements.pairSlots} />
           </div>
         )}
       </div>
@@ -719,9 +774,8 @@ function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: s
   async function save() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.92));
-    if (!blob) return;
-    const url = await uploadAvatar(uid, new File([blob], "avatar.webp", { type: "image/webp" }));
+    const file = await canvasToBoundedFile(canvas, "avatar.webp", AVATAR_TARGET_BYTES, 0.9);
+    const url = await uploadAvatar(uid, file);
     onSaved(`${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`);
     onClose();
   }
@@ -769,13 +823,14 @@ function AvatarEditor({ uid, onSaved, onClose }: { uid: string; onSaved: (url: s
   );
 }
 
-function BackgroundPanel({ color, onOpen }: { color: string; onOpen: () => void }) {
+function BackgroundPanel({ color, unlocked, onOpen }: { color: string; unlocked: boolean; onOpen: () => void }) {
   return (
     <section className="background-panel">
       <span style={sectionLabel()}>background</span>
-      <button type="button" className="background-open" style={{ "--theme-color": color } as CSSProperties} onClick={onOpen}>
-        배경 이미지 편집
+      <button type="button" className={unlocked ? "background-open" : "background-open locked"} style={{ "--theme-color": color } as CSSProperties} onClick={unlocked ? onOpen : undefined}>
+        {unlocked ? "배경 이미지 편집" : "배경 이미지 unlock 준비 중"}
       </button>
+      {!unlocked && <p className="tiny-note">무료 운영 중에는 기본 테마를 사용할 수 있고, 결제 연동 후 일회성 unlock으로 열립니다.</p>}
     </section>
   );
 }
@@ -845,9 +900,8 @@ function BackgroundEditor({ uid, initialOpacity, onSaved, onClose }: { uid: stri
   async function save() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.9));
-    if (!blob) return;
-    const url = await uploadBackground(uid, new File([blob], "background.webp", { type: "image/webp" }), opacity);
+    const file = await canvasToBoundedFile(canvas, "background.webp", BACKGROUND_TARGET_BYTES, 0.86);
+    const url = await uploadBackground(uid, file, opacity);
     onSaved(`${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`);
     onClose();
   }
@@ -860,8 +914,8 @@ function BackgroundEditor({ uid, initialOpacity, onSaved, onClose }: { uid: stri
           <div>
             <canvas
               ref={canvasRef}
-              width={960}
-              height={540}
+              width={1600}
+              height={900}
               className="avatar-canvas background-canvas"
               style={{ opacity }}
               onPointerDown={startDrag}
@@ -1019,7 +1073,25 @@ function DefaultThemeColorPanel({ uid, value }: { uid: string; value: string }) 
   );
 }
 
-function PairPanel({ requests, pair, color }: { requests: PairRequest[]; pair: Pair | null; color: string }) {
+function PairPanel({
+  uid,
+  requests,
+  pair,
+  pairs,
+  activePairId,
+  onActivePairChange,
+  color,
+  pairSlots,
+}: {
+  uid: string;
+  requests: PairRequest[];
+  pair: Pair | null;
+  pairs: Pair[];
+  activePairId: string | null;
+  onActivePairChange: (pairId: string) => void;
+  color: string;
+  pairSlots: number;
+}) {
   const [handle, setHandle] = useState("");
   const [message, setMessage] = useState("");
   async function send() {
@@ -1049,6 +1121,21 @@ function PairPanel({ requests, pair, color }: { requests: PairRequest[]; pair: P
   return (
     <section className="pair-panel">
       <span style={sectionLabel()}>ID 연결하기</span>
+      <p className="tiny-note pair-status" style={{ color }}>연결 슬롯 {pairs.length}/{pairSlots >= 99 ? "무제한" : pairSlots}</p>
+      {pairs.length > 1 && (
+        <div className="pair-switcher">
+          {pairs.map((item) => (
+            <button
+              key={item.id}
+              className={(activePairId || pair?.id) === item.id ? "active" : ""}
+              style={{ "--pair-color": color } as CSSProperties}
+              onClick={() => onActivePairChange(item.id)}
+            >
+              {pairPartnerName(item, uid)}
+            </button>
+          ))}
+        </div>
+      )}
       {pair && <p className="tiny-note pair-status" style={{ color }}>연결되었습니다! · Share로 나의 하루를 공유할 수 있습니다. </p>}
       {pair && <button className="unlink-btn" onClick={unlink}>연결된 ID 해제</button>}
       <div className="tiny-form"><input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="상대 ID" /><button onClick={send}><Link2 size={14} /></button></div>
@@ -1248,8 +1335,7 @@ function TodoView({ scope, pair, uid, profile, selectedDate, dateKey, color }: {
         messages,
         updatedAt: null,
       };
-      await saveSharedDay(uid, dateKey, payload);
-      if (pair) await savePairSharedDay(pair.id, uid, dateKey, payload);
+      await shareDay(dateKey, pair?.id || null, payload);
       alert("공유가 완료되었습니다. SHARED 탭에서 확인해보세요!");
     } catch (err) {
       alert(err instanceof Error ? err.message : "공유에 실패했습니다.");

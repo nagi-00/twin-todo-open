@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../firebase";
+import { prepareUpload } from "./functions";
 import type { UserProfile } from "../types";
 
 export function subscribeProfile(uid: string, callback: (profile: UserProfile | null) => void) {
@@ -63,6 +64,7 @@ export async function updateDefaultThemeColor(uid: string, defaultThemeColor: st
 
 export async function uploadAvatar(uid: string, file: File) {
   if (!storage || !db) throw new Error("Firebase Storage is not configured.");
+  await prepareUpload("avatar");
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const path = `profiles/${uid}/avatar/avatar.${extension}`;
   const avatarRef = ref(storage, path);
@@ -76,6 +78,7 @@ export async function uploadAvatar(uid: string, file: File) {
 
 export async function uploadBackground(uid: string, file: File, opacity: number) {
   if (!storage || !db) throw new Error("Firebase Storage is not configured.");
+  await prepareUpload("background");
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const path = `profiles/${uid}/background/background.${extension}`;
   const backgroundRef = ref(storage, path);
