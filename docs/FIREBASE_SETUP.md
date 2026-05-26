@@ -1,6 +1,6 @@
 # Firebase Setup Guide
 
-이 문서는 TwinTodo Open을 Firebase에 연결하고 안전하게 배포하기 위한 초기 설정 순서입니다.
+이 문서는 modoo-todo, 모두투두를 Firebase에 연결하고 안전하게 배포하기 위한 초기 설정 순서입니다.
 
 ## 1) Firebase Project
 
@@ -52,7 +52,7 @@ Windows PowerShell:
 Copy-Item .env.example .env.local
 ```
 
-이 저장소는 기본 Firebase 프로젝트를 `twintodo-open`으로 사용한다. `.firebaserc`가 없다면 `.firebaserc.example`을 `.firebaserc`로 복사한다.
+이 저장소는 현재 기본 Firebase 프로젝트를 `twintodo-open`으로 사용한다. 브랜드명은 modoo-todo지만, Firebase 프로젝트/Hosting 사이트 ID는 별도 콘솔 작업 전까지 유지한다. `.firebaserc`가 없다면 `.firebaserc.example`을 `.firebaserc`로 복사한다.
 
 ```powershell
 Copy-Item .firebaserc.example .firebaserc

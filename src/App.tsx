@@ -120,7 +120,7 @@ function pairPartner(pair: Pair | null | undefined, uid: string) {
 function pairPartnerName(pair: Pair | null | undefined, uid: string) {
   const partnerUid = pairPartner(pair, uid);
   if (!partnerUid || !pair) return "";
-  return pair.memberDisplayNames?.[partnerUid] || pair.memberNicknames?.[partnerUid] || "Twin";
+  return pair.memberDisplayNames?.[partnerUid] || pair.memberNicknames?.[partnerUid] || "함께";
 }
 
 function readAppliedActions(key: string) {
@@ -358,9 +358,9 @@ export function App() {
   }, [user]);
 
   if (!isFirebaseConfigured) return <Shell title="Firebase 설정 필요" body=".env.local에 Firebase Web App 설정값을 채워주세요." />;
-  if (loading) return <Shell title="TwinTodo" body="불러오는 중입니다." />;
+  if (loading) return <Shell title="modoo-todo" body="불러오는 중입니다." />;
   if (!user) return <LoginScreen />;
-  if (!profile) return <Shell title="TwinTodo" body="프로필을 준비하는 중입니다." />;
+  if (!profile) return <Shell title="modoo-todo" body="프로필을 준비하는 중입니다." />;
   if (!profile.nickname) return <HandleOnboarding displayName={profile.displayName} />;
 
   return <Workspace user={user} profile={profile} />;
@@ -396,8 +396,8 @@ function LoginScreen() {
   return (
     <main className="center-screen">
       <section className="login-card">
-        <div className="login-mark">𝘁𝘄𝗶𝗻-𝘁𝗼𝗱𝗼 ♡ </div>
-        <p>차곡차곡 쌓아가는 나, 혹은 우리의 하루. </p>
+        <div className="login-mark">modoo-todo ♡ </div>
+        <p>혼자서도, 함께도. 모두의 하루를 차곡차곡. </p>
         <button className="dark-btn" onClick={handleLogin} disabled={busy}>
           {busy ? "Now loading..." : "Sign in with Google"}
         </button>
@@ -1904,7 +1904,7 @@ function SharedView({ uid, displayName, partnerName: resolvedPartnerName, dateKe
     || partnerShared?.authorName
     || partnerShared?.authorNickname
     || (partnerUid ? pair.memberDisplayNames?.[partnerUid] || pair.memberNicknames?.[partnerUid] : undefined)
-    || "Twin";
+    || "함께";
   const myLabels = shared?.labels || DEFAULT_CATEGORIES;
   const partnerLabels = partnerShared?.labels || DEFAULT_CATEGORIES;
   const timeline = [

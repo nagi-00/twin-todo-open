@@ -1,15 +1,15 @@
-# TwinTodo Open
+# modoo-todo
 
-TwinTodo Open is the secure public rebuild of the original TwinTodo experience.
+modoo-todo, 모두투두, is the secure public rebuild of the original TwinTodo experience.
 
-The goal is to preserve the existing TwinTodo UI, mood, and daily workflow while rebuilding authentication, authorization, data access, and deployment security for a public multi-user service.
+The goal is to preserve the existing calm UI, mood, and daily workflow while rebuilding authentication, authorization, data access, and deployment security for a public multi-user service.
 
 ## Product Model
 
 - Users can use the app alone without a pair.
 - Users can optionally connect with another user through a nickname-based request and approval flow.
 - Solo data lives under the authenticated user's own scope.
-- Shared twin data lives under an approved pair scope.
+- Shared todo snapshots live under an approved pair scope.
 - Google login is the default authentication path.
 
 ## Security Direction

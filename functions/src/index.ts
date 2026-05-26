@@ -31,6 +31,11 @@ const reservedNicknames = new Set([
   "support",
   "twintodo",
   "twin-todo",
+  "modoo",
+  "modootodo",
+  "modoo-todo",
+  "modoo.todo",
+  "모두투두",
   "관리자",
   "운영자",
 ]);
@@ -492,7 +497,7 @@ export const getPairPartnerInfo = onCall(callableOptions, async (request) => {
     partnerUid,
     partnerNickname: partner.nickname,
     partnerDisplayName: partner.displayName,
-    partnerName: partner.displayName || partner.nickname || "Twin",
+    partnerName: partner.displayName || partner.nickname || "함께",
   };
 });
 

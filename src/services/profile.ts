@@ -31,7 +31,7 @@ export async function ensureUserProfile(user: User) {
     {
       email: user.email ?? "",
       emailVerified: user.emailVerified,
-      displayName: user.displayName ?? "TwinTodo User",
+      displayName: user.displayName ?? "modoo-todo User",
       nickname: null,
       nicknameNormalized: null,
       avatarPath: null,
