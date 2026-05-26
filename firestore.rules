@@ -10,8 +10,19 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function hasVerifiedEmail() {
-      return signedIn() && request.auth.token.email_verified == true;
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email in [
+          "mx.gin.xo@gmail.com",
+          "1995dianalee@gmail.com"
+        ];
+    }
+
+    function hasBackgroundEntitlement(uid) {
+      return isAdmin()
+        || (exists(/databases/$(database)/documents/entitlements/$(uid))
+          && get(/databases/$(database)/documents/entitlements/$(uid)).data.backgroundImageUnlocked == true);
     }
 
     function pairExists(pairId) {
@@ -25,8 +36,14 @@ service cloud.firestore {
     function isPairMember(pairId) {
       return signedIn()
         && pairExists(pairId)
-        && pairData(pairId).memberMap[request.auth.uid] == true
+        && pairData(pairId).members.hasAny([request.auth.uid])
         && pairData(pairId).status == "active";
+    }
+
+    function isPairMemberResource() {
+      return signedIn()
+        && resource.data.members.hasAny([request.auth.uid])
+        && resource.data.status == "active";
     }
 
     function validCategoryKey(value) {
@@ -38,11 +55,17 @@ service cloud.firestore {
     }
 
     function validTodoTitle(value) {
-      return value is string && value.size() >= 1 && value.size() <= 120;
+      return value is string && value.size() >= 1 && value.size() <= 1000;
     }
 
     function validCategoryLabel(value) {
       return value is string && value.size() >= 1 && value.size() <= 12;
+    }
+
+    function validHexColor(value) {
+      return value is string
+        && value.size() == 7
+        && value.matches("^#[0-9a-fA-F]{6}$");
     }
 
     function validCategorySettings() {
@@ -63,19 +86,28 @@ service cloud.firestore {
       return request.resource.data.ownerUid == ownerUid
         && validCategoryKey(request.resource.data.categoryKey)
         && validTodoTitle(request.resource.data.title)
-        && request.resource.data.status == "open";
+        && request.resource.data.status == "open"
+        && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
+        && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool)
+        && (!("important" in request.resource.data) || request.resource.data.important is bool)
+        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
+        && (!("position" in request.resource.data) || request.resource.data.position is number);
     }
 
     function validTodoUpdate() {
       return request.resource.data.ownerUid == resource.data.ownerUid
         && validCategoryKey(request.resource.data.categoryKey)
         && validTodoTitle(request.resource.data.title)
-        && validTodoStatus(request.resource.data.status);
+        && validTodoStatus(request.resource.data.status)
+        && (!("state" in request.resource.data) || request.resource.data.state in [0, 1, 2])
+        && (!("hidden" in request.resource.data) || request.resource.data.hidden is bool)
+        && (!("important" in request.resource.data) || request.resource.data.important is bool)
+        && (!("memo" in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
+        && (!("position" in request.resource.data) || request.resource.data.position is number);
     }
 
     match /users/{uid} {
       allow create: if isSelf(uid)
-        && hasVerifiedEmail()
         && request.resource.data.keys().hasOnly([
           "email",
           "emailVerified",
@@ -83,12 +115,16 @@ service cloud.firestore {
           "nickname",
           "nicknameNormalized",
           "avatarPath",
+          "backgroundPath",
+          "backgroundOpacity",
+          "defaultThemeColor",
           "role",
           "createdAt",
           "updatedAt"
         ])
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.emailVerified == request.auth.token.email_verified
+        && request.resource.data.emailVerified is bool
         && request.resource.data.role == "user"
         && request.resource.data.nickname == null
         && request.resource.data.nicknameNormalized == null;
@@ -99,8 +135,21 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).changedKeys().hasOnly([
           "displayName",
           "avatarPath",
+          "backgroundPath",
+          "backgroundOpacity",
+          "defaultThemeColor",
           "updatedAt"
-        ]);
+        ])
+        && (!request.resource.data.diff(resource.data).changedKeys().hasAny([
+          "backgroundPath",
+          "backgroundOpacity"
+        ]) || hasBackgroundEntitlement(uid))
+        && (!("backgroundOpacity" in request.resource.data)
+          || (request.resource.data.backgroundOpacity is number
+            && request.resource.data.backgroundOpacity >= 0
+            && request.resource.data.backgroundOpacity <= 0.7))
+        && (!("defaultThemeColor" in request.resource.data)
+          || validHexColor(request.resource.data.defaultThemeColor));
 
       allow delete: if false;
 
@@ -136,6 +185,34 @@ service cloud.firestore {
         allow read, create, update: if isSelf(uid);
         allow delete: if isSelf(uid);
       }
+
+      match /messages/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /daily/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+
+      match /shared/{date} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if false;
+      }
+    }
+
+    match /entitlements/{uid} {
+      allow read: if isSelf(uid);
+      allow create, update, delete: if false;
+    }
+
+    match /usageDaily/{usageId} {
+      allow read, write: if false;
+    }
+
+    match /uploadTickets/{uid}/kinds/{kind} {
+      allow read, write: if false;
     }
 
     match /nicknames/{nicknameNormalized} {
@@ -151,7 +228,7 @@ service cloud.firestore {
     }
 
     match /pairs/{pairId} {
-      allow read: if isPairMember(pairId);
+      allow read: if isPairMemberResource();
       allow create, update, delete: if false;
 
       match /todos/{todoId} {
@@ -164,6 +241,18 @@ service cloud.firestore {
       match /settings/categories {
         allow read: if isPairMember(pairId);
         allow create, update: if isPairMember(pairId) && validCategorySettings();
+        allow delete: if false;
+      }
+
+      match /shared/{sharedId} {
+        allow read: if isPairMember(pairId);
+        allow create, update: if isPairMember(pairId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.date is string
+          && request.resource.data.todos is list
+          && request.resource.data.note is string
+          && request.resource.data.color is string
+          && request.resource.data.messages is list;
         allow delete: if false;
       }
     }

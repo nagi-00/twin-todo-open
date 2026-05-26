@@ -1,16 +1,16 @@
-# TwinTodo Secure Rebuild Plan From Existing UI
+# modoo-todo Secure Rebuild Plan From Existing UI
 
 Reference UI branch:
 `https://github.com/nagi-00/nagi-todo/tree/claude/setup-firebase-twin-todo-1KpLb`
 
-This repository is the maintainable public rebuild target. The original TwinTodo UI and feature flow should be preserved, but the security model must be rebuilt for a public deployed service.
+This repository is the maintainable public rebuild target. modoo-todo preserves the original TwinTodo UI and feature flow while rebuilding the security model for a public deployed service.
 
 ## 1) Product Model
 
-TwinTodo supports two modes:
+modoo-todo supports two modes:
 
 - Solo mode: a user can use todo, journal, routines, notes, categories, profile, and widgets without connecting to anyone.
-- Pair mode: a user can optionally connect with another user through nickname request and approval, then share selected twin todo data through a pair scope.
+- Pair mode: a user can optionally connect with another user through nickname request and approval, then share selected todo snapshots through a pair scope.
 
 Pairing is optional. Lack of a pair must never block normal personal usage.
 
@@ -27,7 +27,7 @@ Pairing is optional. Lack of a pair must never block normal personal usage.
 - Memo widget
 - Existing calm visual style
 - Mobile sidebar behavior
-- TwinTodo concept
+- modoo-todo brand concept
 
 ### Replace
 

@@ -1,6 +1,6 @@
-# TwinTodo Strict Security Implementation Spec
+# modoo-todo Strict Security Implementation Spec
 
-This spec defines the initial security baseline for TwinTodo Open.
+This spec defines the initial security baseline for modoo-todo.
 
 ## 1) Security Stance
 
@@ -118,6 +118,7 @@ Other solo collections:
 `pairs/{pairId}`
 
 - `members`
+- `pairKey`
 - `memberMap`
 - `status`
 - `createdAt`
@@ -156,7 +157,7 @@ Nickname:
 - 2 to 20 characters after normalization
 - No control characters
 - No URL or email form
-- Reserved words blocked: `admin`, `support`, `twintodo`, `twin-todo`, `관리자`, `운영자`
+- Reserved words blocked: `admin`, `support`, `twintodo`, `twin-todo`, `modoo`, `modootodo`, `modoo-todo`, `modoo.todo`, `모두투두`, `관리자`, `운영자`
 - Nickname change cooldown recommended: 7 days
 
 Category labels:

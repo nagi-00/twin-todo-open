@@ -1,9 +1,13 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "functions": {
+    "source": "functions"
   },
   "hosting": {
     "public": "dist",
@@ -13,6 +17,23 @@
       "**/node_modules/**"
     ],
     "headers": [
+      {
+        "source": "/__/auth/**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; frame-src 'self' https:; connect-src 'self' https:; img-src 'self' data: https:; form-action 'self' https:"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          }
+        ]
+      },
       {
         "source": "**",
         "headers": [
@@ -34,11 +55,11 @@
           },
           {
             "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(), geolocation=()"
+            "value": "camera=(), microphone=(), geolocation=(self)"
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com; font-src 'self' data:; form-action 'self'; upgrade-insecure-requests"
+            "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://*.googleusercontent.com; script-src 'self' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net; frame-src 'self' https://twintodo-open.firebaseapp.com https://accounts.google.com https://*.google.com https://www.recaptcha.net https://recaptcha.google.com https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net https://*.run.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://api.open-meteo.com https://www.youtube.com; font-src 'self' data:; form-action 'self' https://accounts.google.com; upgrade-insecure-requests"
           }
         ]
       }
